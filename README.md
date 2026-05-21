@@ -26,7 +26,7 @@ Collapse, resize, and float UI panels like the server list, channel list, member
 ```bash
 # 1. Clone this repo into your Vencord userplugins folder
 cd /path/to/Vencord/src/userplugins
-git clone https://github.com/YOUR_USERNAME/modularCollapse-vencord.git modularCollapse
+git clone https://github.com/Fantasttic/modularCollapse-vencord.git modularCollapse
 
 # 2. Build Vencord
 cd /path/to/Vencord
