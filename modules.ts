@@ -1,14 +1,9 @@
 /*
- * Webpack module finders — Using findCssClassesLazy
- *
- * Discord minified the KEYS of CSS modules (e.g. "sidebar" → "pz"),
- * but the VALUES still contain the readable class names (e.g. "sidebar__5e434").
- *
- * findCssClassesLazy searches module VALUES using regex and returns
- * a Record mapping each requested class name → its mangled value.
- *
- * Data sourced from live Discord inspection (May 2026).
+ * Vencord, a Discord client mod
+ * Copyright (c) 2026 Vendicated and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
+
 import { findCssClassesLazy } from "@webpack";
 
 // ─── Module 111113 — Main Layout ───
@@ -45,7 +40,7 @@ export const scroller = findCssClassesLazy("tree", "discoveryIcon", "scroller");
 
 // ─── Module 73045 — Members List ───
 // members__6e500, memberCount__6e500, dotOnline__6e500, guildName__6e500
-export const members = findCssClassesLazy("members", "memberCount", "dotOnline");
+export const members = findCssClassesLazy("members", "memberCount", "dotOnline", "member");
 
 // ─── Module 85486 — Search Bar (header) ───
 // search_c322aa, searchBar_c322aa
@@ -53,7 +48,7 @@ export const toolbar = findCssClassesLazy("search", "searchBar");
 
 // ─── Module 13808 — Search Results / Content Panel ───
 // content_c3474d, scroller_c3474d, headerRow_c3474d, closeButton_c3474d
-export const search = findCssClassesLazy("headerRow", "closeButton", "scrollerContent");
+export const search = findCssClassesLazy("headerRow", "closeButton", "scrollerContent", "searchResultsWrap");
 
 // ─── Module 21101 — Channel ───
 export const channels = findCssClassesLazy("channel", "iconWrapper");
@@ -64,38 +59,18 @@ export const channels = findCssClassesLazy("channel", "iconWrapper");
 
 export const panel = findCssClassesLazy("outer", "inner", "overlay");
 export const frame = findCssClassesLazy("bar", "winButtons");
-export const calls = findCssClassesLazy("callContainer", "fullScreen");
-export const social = findCssClassesLazy("inviteToolbar", "peopleColumn", "nowPlayingColumn");
-export const user = findCssClassesLazy("nameTag", "avatarWrapper");
-export const popout = findCssClassesLazy("chatLayerWrapper");
+export const calls = findCssClassesLazy("callContainer", "fullScreen", "noChat", "wrapper");
+export const social = findCssClassesLazy("inviteToolbar", "peopleColumn", "nowPlayingColumn", "tabBody");
+export const user = findCssClassesLazy("nameTag", "avatarWrapper", "buttons");
+export const popout = findCssClassesLazy("chatLayerWrapper", "container");
 export const effects = findCssClassesLazy("profileEffects");
 export const tooltip = findCssClassesLazy("menu", "caret");
 export const preview = findCssClassesLazy("popout", "timestamp");
 export const activity = findCssClassesLazy("itemCard", "emptyCard");
-export const game = findCssClassesLazy("openOnHover", "userSection");
+export const game = findCssClassesLazy("openOnHover", "userSection", "container");
 export const callButtons = findCssClassesLazy("controlButton");
 export const userAreaButtons = findCssClassesLazy("actionButtons");
-export const threads = findCssClassesLazy("uploadArea", "newMemberBanner");
+export const threads = findCssClassesLazy("uploadArea", "newMemberBanner", "grid", "list", "headerRow");
+export const layers = findCssClassesLazy("layer", "layers");
 export const profileWrappers = findCssClassesLazy("header", "footerButton");
 
-// Debug helper — run __modularCollapse_modules() in Discord console
-(globalThis as any).__modularCollapse_modules = () => {
-    const mods: Record<string, any> = {
-        sidebar, guilds, icons, input, scroller, members, toolbar,
-        search, channels, panel, frame, calls, social, user, popout,
-        effects, tooltip, preview, activity, game, callButtons,
-        userAreaButtons, threads, profileWrappers,
-    };
-    for (const [name, mod] of Object.entries(mods)) {
-        try {
-            const keys = mod ? Object.keys(mod) : [];
-            const found = keys.length > 0;
-            console.log(
-                `[CUI] ${name}: ${found ? "✓" : "✗"} (${keys.length} keys)`,
-                found ? keys.slice(0, 8).join(", ") : "(empty)"
-            );
-        } catch (e) {
-            console.log(`[CUI] ${name}: ✗ (error)`, e);
-        }
-    }
-};

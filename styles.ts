@@ -1,12 +1,14 @@
 /*
- * CSS injection system for collapsible panels and button groups
- * Ported from the original styles object — generates and manages all dynamic CSS
+ * Vencord, a Discord client mod
+ * Copyright (c) 2026 Vendicated and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
-import { addStyle, removeStyle } from "./cssHelper";
-import { getSettings } from "./settings";
-import * as m from "./modules";
-import * as el from "./elements";
+
 import { PANEL_COUNT } from "./constants";
+import { addStyle, removeStyle } from "./cssHelper";
+import * as el from "./elements";
+import * as m from "./modules";
+import { getSettings } from "./settings";
 
 const NAME = "ModularCollapse";
 

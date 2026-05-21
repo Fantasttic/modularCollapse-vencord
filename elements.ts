@@ -1,8 +1,9 @@
 /*
- * DOM element getters
- * Uses CSS class names from webpack modules with DOM fallbacks
- * for critical elements when modules aren't found.
+ * Vencord, a Discord client mod
+ * Copyright (c) 2026 Vendicated and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
+
 import * as m from "./modules";
 
 /** Try querySelector with class, fall back to attribute/structural selector */

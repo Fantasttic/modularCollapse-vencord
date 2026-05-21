@@ -1,30 +1,29 @@
 /*
- * ModularCollapse for Vencord
- * Ported from BetterDiscord plugin by programmer2514 (v12.3.4)
- *
- * A feature-rich plugin that reworks the Discord UI to be significantly more modular.
- * Allows collapsing, resizing, and floating virtually every UI panel.
- *
- * NOTE: This is a userplugin — it relies on DOM manipulation and is not suitable
- * for the official Vencord plugin repository.
+ * Vencord, a Discord client mod
+ * Copyright (c) 2026 Vendicated and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
+
+import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
-import { PANEL_COUNT, ICONS, getCurrentLabels } from "./constants";
-import { getSettings, loadSettings, setSetting, setSettingArrayIndex, getShortcutSets } from "./settings";
-import * as styles from "./styles";
+
+import { getCurrentLabels, ICONS, PANEL_COUNT } from "./constants";
+import { clearAllStyles as clearCSSHelper } from "./cssHelper";
 import * as el from "./elements";
 import * as m from "./modules";
-import { clearAllStyles as clearCSSHelper } from "./cssHelper";
+import { addSettingsListener, getSettings, getShortcutSets, loadSettings, setSetting } from "./settings";
+import * as styles from "./styles";
 
 // ─── Runtime State ───
 
 let toolbarElement: HTMLElement | null = null;
 let dragging: HTMLElement | null = null;
-let interval: ReturnType<typeof setInterval> | null = null;
+let draggingRect: DOMRect | null = null;
+let settingsListenerCleanup: (() => void) | null = null;
 let controller: AbortController | null = null;
 let observer: MutationObserver | null = null;
 let collapsed: boolean[] = new Array(PANEL_COUNT).fill(false);
-let keys: Set<string> = new Set();
+const keys: Set<string> = new Set();
 let lastKeypress = Date.now();
 let settingsButtonsHidden = false;
 let messageInputButtonsHidden = false;
@@ -37,10 +36,10 @@ function isNear(element: Element | null, distance: number, x: number, y: number)
     const box = element?.getBoundingClientRect();
     if (!box) return false;
 
-    let top = box.top - distance;
-    let left = box.left - distance;
+    const top = box.top - distance;
+    const left = box.left - distance;
     let right = box.right + distance;
-    let bottom = box.bottom + distance;
+    const bottom = box.bottom + distance;
 
     if (element?.classList?.contains(m.frame?.bar))
         right = window.innerWidth + distance;
@@ -52,6 +51,40 @@ function getController(): AbortController {
     if (controller && !controller.signal.aborted) return controller;
     controller = new AbortController();
     return controller;
+}
+
+function evaluateSubExpr(sub: string): boolean {
+    const match = sub.trim().match(/^(innerWidth|innerHeight|outerWidth|outerHeight)\s*(<=|>=|<|>|===|==|!==|!=)\s*(\d+)$/);
+    if (!match) return false;
+
+    const [, variable, operator, valueStr] = match;
+    const currentVal = window[variable as "innerWidth" | "innerHeight" | "outerWidth" | "outerHeight"];
+    const compareVal = parseInt(valueStr, 10);
+
+    switch (operator) {
+        case "<": return currentVal < compareVal;
+        case ">": return currentVal > compareVal;
+        case "<=": return currentVal <= compareVal;
+        case ">=": return currentVal >= compareVal;
+        case "==":
+        case "===": return currentVal === compareVal;
+        case "!=":
+        case "!==": return currentVal !== compareVal;
+        default: return false;
+    }
+}
+
+function safeEval(expr: string): boolean {
+    const cleanExpr = expr.replace(/window\./g, "").replace(/[()]/g, "").trim();
+    if (!cleanExpr) return false;
+
+    if (cleanExpr.includes("&&")) {
+        return cleanExpr.split("&&").every(part => evaluateSubExpr(part));
+    }
+    if (cleanExpr.includes("||")) {
+        return cleanExpr.split("||").some(part => evaluateSubExpr(part));
+    }
+    return evaluateSubExpr(cleanExpr);
 }
 
 // ─── Toolbar ───
@@ -83,7 +116,7 @@ function createToolbarContainer(): void {
         toolbarParent?.appendChild(toolbar);
     }
 
-    toolbarElement = document.querySelector(".cui-toolbar");
+    toolbarElement = toolbar;
 
     if (toolbarElement) {
         const s = getSettings();
@@ -218,6 +251,34 @@ function tickKeyboardShortcuts(): void {
     }
 }
 
+function checkConditionalCollapse(): void {
+    const s = getSettings();
+    if (!s.conditionalCollapse) return;
+
+    for (let i = 0; i < PANEL_COUNT; i++) {
+        if (s.collapseConditionals[i]) {
+            try {
+                if (safeEval(s.collapseConditionals[i])) {
+                    if (!collapsed[i]) styles.collapseElementDynamic(i, true, collapsed);
+                } else {
+                    if (collapsed[i]) styles.collapseElementDynamic(i, false, collapsed);
+                }
+            } catch { /* ignore invalid expressions */ }
+        }
+    }
+}
+
+function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+    let inThrottle = false;
+    return function (this: any, ...args: any[]) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => { inThrottle = false; }, limit);
+        }
+    } as any;
+}
+
 // ─── Event Listeners ───
 
 function addListeners(): void {
@@ -235,6 +296,7 @@ function addListeners(): void {
                 target.classList?.contains(m.social?.nowPlayingColumn)) {
                 target.style.setProperty("transition", "none", "important");
                 dragging = target;
+                draggingRect = target.getBoundingClientRect();
             }
             if (target.classList?.contains(m.sidebar?.sidebarList)) {
                 document.documentElement.style.setProperty("--cui-channel-list-handle-transition", "none");
@@ -284,6 +346,7 @@ function addListeners(): void {
             if (!dragging) return;
             const d = dragging;
             dragging = null;
+            draggingRect = null;
 
             if (d.classList?.contains(m.sidebar?.sidebarList)) {
                 setSetting("channelListWidth", parseInt(d.style.width) || s.defaultChannelListWidth);
@@ -311,18 +374,22 @@ function addListeners(): void {
         setTimeout(() => tickExpandOnHover(e.clientX, e.clientY), s.transitionSpeed);
     } catch {} }, { passive: true, signal: ctrl.signal });
 
-    document.body.addEventListener("mousemove", (e: MouseEvent) => { try {
-        tickExpandOnHover(e.clientX, e.clientY);
-        tickCollapseSettings(e.clientX, e.clientY);
-        tickMessageInputCollapse(e.clientX, e.clientY);
-        tickCollapseToolbar(e.clientX, e.clientY, s.collapseToolbar === "all");
+    const throttledHoverChecks = throttle((x: number, y: number) => {
+        tickExpandOnHover(x, y);
+        tickCollapseSettings(x, y);
+        tickMessageInputCollapse(x, y);
+        tickCollapseToolbar(x, y, s.collapseToolbar === "all");
+    }, 50);
 
-        if (!dragging) return;
+    document.body.addEventListener("mousemove", (e: MouseEvent) => { try {
+        throttledHoverChecks(e.clientX, e.clientY);
+
+        if (!dragging || !draggingRect) return;
 
         const isLeftPanel = dragging.classList?.contains(m.sidebar?.sidebarList);
         let width = isLeftPanel
-            ? e.clientX - dragging.getBoundingClientRect().left
-            : dragging.getBoundingClientRect().right - e.clientX;
+            ? e.clientX - draggingRect.left
+            : draggingRect.right - e.clientX;
 
         width = Math.max(80, Math.min(width, window.innerWidth * 0.6));
 
@@ -352,12 +419,16 @@ function addListeners(): void {
     document.body.addEventListener("keyup", (e: KeyboardEvent) => {
         if (s.keyboardShortcuts) keys.delete(e.key);
     }, { passive: true, signal: ctrl.signal });
+
+    window.addEventListener("resize", () => {
+        checkConditionalCollapse();
+    }, { passive: true, signal: ctrl.signal });
 }
 
 // ─── Observer ───
 
 function createObserver(): MutationObserver {
-    return new MutationObserver((mutationList) => { try {
+    return new MutationObserver(mutationList => { try {
         for (const mutation of mutationList) {
             for (const node of mutation.addedNodes) {
                 if (!(node instanceof HTMLElement)) continue;
@@ -378,7 +449,7 @@ function createObserver(): MutationObserver {
                     partialReload();
                     return;
                 }
-                if (node.classList?.contains("layer_bc663c")) {
+                if (m.layers?.layer && node.classList?.contains(m.layers.layer)) {
                     reload();
                     return;
                 }
@@ -423,16 +494,12 @@ export default definePlugin({
     name: "ModularCollapse",
     description: "A feature-rich plugin that reworks the Discord UI to be significantly more modular. Collapse, resize, and float UI panels.",
     authors: [
-        { name: "programmer2514", id: 563652755814875146n },
-        { name: "Ported to Vencord", id: 0n },
+        Devs.programmer2514,
+        Devs.Fantasttic,
     ],
     requiresRestart: false,
 
     start() {
-        // Debug: check which modules loaded
-        console.info("[ModularCollapse] Checking modules...");
-        try { (globalThis as any).__modularCollapse_modules?.(); } catch { }
-
         loadSettings().then(() => {
             try {
                 addListeners();
@@ -444,24 +511,11 @@ export default definePlugin({
                     attributes: false,
                 });
 
-                interval = setInterval(() => {
-                    const s = getSettings();
-                    if (s.conditionalCollapse) {
-                        for (let i = 0; i < PANEL_COUNT; i++) {
-                            if (s.collapseConditionals[i]) {
-                                try {
-                                    // eslint-disable-next-line no-eval
-                                    if (eval(s.collapseConditionals[i])) {
-                                        if (!collapsed[i]) styles.collapseElementDynamic(i, true, collapsed);
-                                    } else {
-                                        if (collapsed[i]) styles.collapseElementDynamic(i, false, collapsed);
-                                    }
-                                } catch { /* ignore invalid expressions */ }
-                            }
-                        }
-                    }
-                }, 250);
+                settingsListenerCleanup = addSettingsListener(() => {
+                    checkConditionalCollapse();
+                });
 
+                checkConditionalCollapse();
                 initialize();
                 console.info("[ModularCollapse] Enabled");
             } catch (e) {
@@ -474,7 +528,10 @@ export default definePlugin({
         controller?.abort();
         controller = null;
 
-        if (interval) { clearInterval(interval); interval = null; }
+        if (settingsListenerCleanup) {
+            settingsListenerCleanup();
+            settingsListenerCleanup = null;
+        }
         observer?.disconnect();
         observer = null;
 

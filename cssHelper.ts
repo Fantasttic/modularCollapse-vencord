@@ -1,6 +1,7 @@
 /*
- * CSS style injection utilities
- * Replaces BdApi.DOM.addStyle / BdApi.DOM.removeStyle
+ * Vencord, a Discord client mod
+ * Copyright (c) 2026 Vendicated and contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 const STYLE_PREFIX = "collapsibleui-";
