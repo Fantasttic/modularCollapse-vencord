@@ -1,69 +1,150 @@
-# ModularCollapse for Vencord
+# ModularCollapse
+### A Vencord Userplugin
 
-> Ported from the [BetterDiscord CollapsibleUI plugin](https://github.com/programmer2514/BetterDiscord-CollapsibleUI) by programmer2514 (v12.3.4)
+> Ported and modernized from the [BetterDiscord CollapsibleUI](https://github.com/programmer2514/BetterDiscord-CollapsibleUI) plugin by **programmer2514**
 
-A feature-rich plugin that reworks the Discord UI to be significantly more modular.
-Collapse, resize, and float UI panels like the server list, channel list, members list, user profile, and more.
+A feature-rich plugin that reworks the Discord UI to be significantly more modular.  
+Collapse, resize, and float UI panels with keyboard shortcuts, hover expansion, and conditional triggers.
 
-## Features
+![ModularCollapse Preview](./preview.png)
 
-- **Collapse** any UI panel (server list, channel list, members, user area, toolbar, etc.)
-- **Resize** panels by dragging their edges
-- **Float** panels so they overlay the chat area
-- **Expand on hover** — collapsed panels can expand when you hover over them
-- **Keyboard shortcuts** for quick toggling
-- **Conditional collapse** — auto-collapse panels based on custom conditions
-- **Size-based collapse** — auto-collapse when the window is too small
+---
 
-## Installation
+## ✨ Features
 
-### Prerequisites
+| Feature | Description |
+|---------|-------------|
+| 🗂️ **Panel Collapse** | Toggle 11 UI panels via toolbar buttons |
+| ↔️ **Drag Resize** | Click & drag panel edges to resize. Right-click to reset |
+| 🪟 **Floating Panels** | Panels float over chat instead of pushing the layout |
+| 🖱️ **Expand on Hover** | Collapsed panels expand when you hover near them |
+| ⌨️ **Keyboard Shortcuts** | Configurable key combos for each panel |
+| 📐 **Conditional Collapse** | Auto-collapse based on window size (e.g. `innerWidth < 1200`) |
+| 📏 **Size Collapse** | Auto-collapse panels when the window is too small |
+| 🎨 **Smooth Transitions** | Configurable animation speed |
 
-- [Vencord](https://github.com/Vendicated/Vencord) installed from source (not the installer)
+### Panels supported
 
-### Steps
+- Server List
+- Channel List
+- Members List
+- User Profile
+- Message Input
+- Window Bar
+- Call Window
+- User Area
+- Search Panel
+- Forum Popout
+- Activity Panel
+
+---
+
+## 📦 Installation
+
+> **Requires**: Vencord installed **from source** (not the installer).  
+> See [Vencord's setup guide](https://docs.vencord.dev/installing/) if needed.
+
+### Method 1 — Git Clone (recommended, easy updates)
 
 ```bash
-# 1. Clone this repo into your Vencord userplugins folder
+# Navigate to your Vencord userplugins folder
 cd /path/to/Vencord/src/userplugins
-git clone https://github.com/Fantasttic/modularCollapse-vencord.git modularCollapse
 
-# 2. Build Vencord
+# Clone this repo as "modularCollapse"
+git clone https://github.com/Fantasttic/modularCollapse-vencord.git modularCollapse
+```
+
+### Method 2 — Manual Download
+
+1. Download this repository as a ZIP
+2. Extract the folder and rename it to `modularCollapse`
+3. Place it inside `your-vencord-folder/src/userplugins/`
+
+### After installing
+
+```bash
+# Build Vencord
 cd /path/to/Vencord
 pnpm build
 
-# 3. Inject into Discord
+# Inject into Discord (if first time)
 pnpm inject
 ```
 
-4. Restart Discord
-5. Go to **Settings → Vencord → Plugins** and enable **ModularCollapse**
+4. **Restart Discord**
+5. Go to **Settings → Vencord → Plugins** → search **ModularCollapse** → Enable ✅
 
-### Updating
+---
+
+## 🔄 Updating
 
 ```bash
 cd /path/to/Vencord/src/userplugins/modularCollapse
 git pull
+
 cd /path/to/Vencord
 pnpm build
 ```
 
-Then restart Discord.
+Restart Discord after building.
 
-## Usage
+---
 
-Once enabled, collapse buttons appear in the Discord toolbar (top-right).
-Click them to toggle each UI panel. You can also:
+## 🎮 Usage
 
-- **Right-click** a panel edge to reset its width
-- **Drag** panel edges to resize them
-- Configure expand-on-hover, floating panels, and keyboard shortcuts in the plugin settings
+Once enabled, **collapse buttons appear in Discord's toolbar** (top-right area).
 
-## Credits
+- **Click** a button to toggle that panel
+- **Drag** a panel edge to resize it
+- **Right-click** a panel edge to reset its width to default
+- Configure everything in **Settings → Vencord → Plugins → ModularCollapse**
 
-- **programmer2514** — Original [BetterDiscord CollapsibleUI](https://github.com/programmer2514/BetterDiscord-CollapsibleUI) plugin
-- Adapted for Vencord's plugin API with modern Discord CSS module support
+### Conditional Collapse Syntax
 
-## License
+In the plugin settings, you can enter conditions like:
 
-This project follows the same license as the original CollapsibleUI plugin.
+```
+innerWidth < 1200
+innerWidth < 1200 && innerHeight > 600
+outerWidth >= 1920
+```
+
+Supported variables: `innerWidth`, `innerHeight`, `outerWidth`, `outerHeight`  
+Supported operators: `<`, `>`, `<=`, `>=`, `==`, `===`, `!=`, `!==`  
+Supported logic: `&&`, `||`
+
+---
+
+## 🔒 Security
+
+- ✅ No `eval()` — conditions parsed by a safe built-in evaluator
+- ✅ No hardcoded Discord class hashes — uses `findCssClassesLazy`
+- ✅ No global scope pollution
+
+---
+
+## 🏗️ Project Structure
+
+```
+modularCollapse/
+├── index.ts       # Plugin entry, event listeners, lifecycle
+├── settings.ts    # DataStore persistence + caching
+├── modules.ts     # CSS class mappings
+├── elements.ts    # DOM element queries
+├── styles.ts      # Dynamic CSS per panel state
+├── cssHelper.ts   # Style element utilities
+└── constants.ts   # Panel labels & SVG icons
+```
+
+---
+
+## 👥 Credits
+
+- **[programmer2514](https://github.com/programmer2514)** — Original [BetterDiscord CollapsibleUI](https://github.com/programmer2514/BetterDiscord-CollapsibleUI) plugin
+- **[Fantasttic](https://github.com/Fantasttic)** — Vencord port & modernization
+
+---
+
+## 📄 License
+
+GPL-3.0 — same as Vencord.
