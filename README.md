@@ -9,7 +9,17 @@
 A feature-rich plugin that reworks the Discord UI to be significantly more modular.  
 Collapse, resize, and float UI panels with keyboard shortcuts, hover expansion, and conditional triggers.
 
-https://github.com/user-attachments/assets/c814fd32-0c4e-45fe-b636-2293d3521e77
+
+
+https://github.com/user-attachments/assets/9eebf129-656f-493a-b738-4761f70d4666
+
+
+
+
+
+
+
+
 
 ![ModularCollapse Preview](./preview.png)
 
