@@ -63,7 +63,7 @@ export function getSettingsContainer(): Element | null {
 export function getMessageInputContainer(): Element | null {
     const selector = m.input?.buttons
         ? `.${m.input.buttons}`
-        : '[class*="buttons_"][class*="__74017"]';
+        : '[class*="buttons_"]';
     const all = document.querySelectorAll(selector);
     return all.length > 0 ? all[all.length - 1] : null;
 }
@@ -109,7 +109,7 @@ export function getActivityPanel(): Element | null {
 }
 
 export function getChatWrapper(): Element | null {
-    return q(m.guilds?.content, '[class*="content_"][class*="f75fb0"]');
+    return q(m.guilds?.content, '[class*="content_"]');
 }
 
 export function getNoChat(): Element | null {

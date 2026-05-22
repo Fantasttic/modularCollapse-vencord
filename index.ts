@@ -53,13 +53,14 @@ function getController(): AbortController {
     return controller;
 }
 
+/** Safely evaluates a single comparison sub-expression like `innerWidth < 1200` */
 function evaluateSubExpr(sub: string): boolean {
-    const match = sub.trim().match(/^(innerWidth|innerHeight|outerWidth|outerHeight)\s*(<=|>=|<|>|===|==|!==|!=)\s*(\d+)$/);
+    const match = sub.trim().match(/^(innerWidth|innerHeight|outerWidth|outerHeight)\s*(<=|>=|<|>|===|==|!==|!=)\s*(\d+(?:\.\d+)?)$/);
     if (!match) return false;
 
     const [, variable, operator, valueStr] = match;
     const currentVal = window[variable as "innerWidth" | "innerHeight" | "outerWidth" | "outerHeight"];
-    const compareVal = parseInt(valueStr, 10);
+    const compareVal = Number(valueStr);
 
     switch (operator) {
         case "<": return currentVal < compareVal;
@@ -74,13 +75,29 @@ function evaluateSubExpr(sub: string): boolean {
     }
 }
 
+/**
+ * Safely evaluates conditional expressions without using eval().
+ * Supports: window properties (innerWidth, innerHeight, outerWidth, outerHeight),
+ * comparison operators (<, >, <=, >=, ==, ===, !=, !==),
+ * logical operators (&& and ||), and numeric literals (including decimals).
+ * Examples: "innerWidth < 1200", "innerWidth < 1200 && innerHeight > 600"
+ */
 function safeEval(expr: string): boolean {
     const cleanExpr = expr.replace(/window\./g, "").replace(/[()]/g, "").trim();
     if (!cleanExpr) return false;
 
+    // Handle && (all conditions must be true)
     if (cleanExpr.includes("&&")) {
-        return cleanExpr.split("&&").every(part => evaluateSubExpr(part));
+        return cleanExpr.split("&&").every(part => {
+            const trimmed = part.trim();
+            // Support nested || within && groups
+            if (trimmed.includes("||")) {
+                return trimmed.split("||").some(sub => evaluateSubExpr(sub));
+            }
+            return evaluateSubExpr(trimmed);
+        });
     }
+    // Handle || (any condition must be true)
     if (cleanExpr.includes("||")) {
         return cleanExpr.split("||").some(part => evaluateSubExpr(part));
     }
@@ -158,7 +175,10 @@ function createToolbarButton(index: number): void {
 function toggleButton(index: number): void {
     const s = getSettings();
     styles.togglePanel(index);
-    toolbarElement?.querySelector(`#cui-icon-${index}`)?.classList.toggle(m.icons?.selected);
+    const selectedClass = m.icons?.selected;
+    if (selectedClass) {
+        toolbarElement?.querySelector(`#cui-icon-${index}`)?.classList.toggle(selectedClass);
+    }
     const newActive = [...s.buttonsActive];
     newActive[index] = !newActive[index];
     setSetting("buttonsActive", newActive);
@@ -174,7 +194,7 @@ function tickExpandOnHover(x: number, y: number): void {
     for (let i = 0; i < PANEL_COUNT; i++) {
         if (!s.collapseDisabledButtons && s.buttonIndexes[i] === 0) continue;
         if (!s.expandOnHoverEnabled[i]) continue;
-        if (!(!s.buttonsActive[i])) continue;
+        if (s.buttonsActive[i]) continue;
 
         if (isNear(panels[i], s.expandOnHoverFudgeFactor, x, y)) {
             if (collapsed[i]) {
@@ -268,13 +288,20 @@ function checkConditionalCollapse(): void {
     }
 }
 
+/** Trailing-edge throttle: ensures the last call is always executed */
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
-    let inThrottle = false;
+    let lastArgs: any[] | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     return function (this: any, ...args: any[]) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => { inThrottle = false; }, limit);
+        lastArgs = args;
+        if (!timer) {
+            func.apply(this, lastArgs);
+            lastArgs = null;
+            timer = setTimeout(() => {
+                if (lastArgs) func.apply(this, lastArgs);
+                lastArgs = null;
+                timer = null;
+            }, limit);
         }
     } as any;
 }
@@ -309,38 +336,26 @@ function addListeners(): void {
         const s = getSettings();
 
         if (e.button === 2) {
-            // Right-click resets
+            // Right-click resets panel width to default
             const target = e.target as HTMLElement;
-            if (target.classList?.contains(m.sidebar?.sidebarList)) {
-                setSetting("channelListWidth", s.defaultChannelListWidth);
+            const resetPanel = (settingKey: keyof typeof s, defaultValue: number) => {
+                setSetting(settingKey as any, defaultValue);
                 styles.updateVariables();
                 setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
-            if (target.classList?.contains(m.members?.members)) {
-                setSetting("membersListWidth", s.defaultMembersListWidth);
-                styles.updateVariables();
-                setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
-            if (target.classList?.contains(m.panel?.outer)) {
-                setSetting("userProfileWidth", s.defaultUserProfileWidth);
-                styles.updateVariables();
-                setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
-            if (target.classList?.contains(m.search?.searchResultsWrap)) {
-                setSetting("searchPanelWidth", s.defaultSearchPanelWidth);
-                styles.updateVariables();
-                setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
-            if (target.classList?.contains(m.social?.nowPlayingColumn)) {
-                setSetting("activityPanelWidth", s.defaultActivityPanelWidth);
-                styles.updateVariables();
-                setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
-            if (target.classList?.contains(m.popout?.chatLayerWrapper)) {
-                setSetting("forumPopoutWidth", s.defaultForumPopoutWidth);
-                styles.updateVariables();
-                setTimeout(() => target.style.removeProperty("transition"), s.transitionSpeed);
-            }
+            };
+
+            if (target.classList?.contains(m.sidebar?.sidebarList))
+                resetPanel("channelListWidth", s.defaultChannelListWidth);
+            else if (target.classList?.contains(m.members?.members))
+                resetPanel("membersListWidth", s.defaultMembersListWidth);
+            else if (target.classList?.contains(m.panel?.outer))
+                resetPanel("userProfileWidth", s.defaultUserProfileWidth);
+            else if (target.classList?.contains(m.search?.searchResultsWrap))
+                resetPanel("searchPanelWidth", s.defaultSearchPanelWidth);
+            else if (target.classList?.contains(m.social?.nowPlayingColumn))
+                resetPanel("activityPanelWidth", s.defaultActivityPanelWidth);
+            else if (target.classList?.contains(m.popout?.chatLayerWrapper))
+                resetPanel("forumPopoutWidth", s.defaultForumPopoutWidth);
         } else {
             // Left-click finish resize
             if (!dragging) return;
@@ -449,7 +464,7 @@ function createObserver(): MutationObserver {
                     partialReload();
                     return;
                 }
-                if (node.classList?.contains(m.layers?.layer || "layer_bc663c")) {
+                if (m.layers?.layer && node.classList?.contains(m.layers.layer)) {
                     reload();
                     return;
                 }

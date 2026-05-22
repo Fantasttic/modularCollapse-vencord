@@ -607,7 +607,6 @@ export function clearPanel(index: number): void {
 }
 
 export function collapseElementDynamic(index: number, collapsed: boolean, collapsedStates: boolean[]): void {
-    const s = getSettings();
     const name = PANEL_NAMES[index];
 
     if (collapsed) {
@@ -629,7 +628,7 @@ export function initSettingsButtons(): void {
             transition: gap var(--cui-transition-speed) !important;
             transform: translateX(calc((1 - var(--cui-channel-list-toggled)) * 1000000000px));
         }
-        .${m.user?.buttons} > *:not(:last-child):not(.gameActivityToggleButton_fd3fb5) {
+        .${m.user?.buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) {
             transition: width var(--cui-transition-speed) !important;
             overflow: hidden !important;
         }
@@ -640,7 +639,7 @@ export function initSettingsButtons(): void {
 export function hideSettingsButtons(): void {
     addStyle("settingsButtons_hide", `
         .${m.user?.buttons} { gap: 0px !important; }
-        .${m.user?.buttons} > *:not(:last-child):not(.gameActivityToggleButton_fd3fb5) { width: 0px !important; }
+        .${m.user?.buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) { width: 0px !important; }
     `.replace(/\s+/g, " "));
 }
 
