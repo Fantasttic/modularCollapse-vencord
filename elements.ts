@@ -6,7 +6,6 @@
 
 import * as m from "./modules";
 
-/** Try querySelector with class, fall back to attribute/structural selector */
 function q(classVal: string | undefined, fallback?: string): Element | null {
     if (classVal) {
         const el = document.querySelector(`.${classVal}`);
@@ -28,7 +27,6 @@ export function getToolbar(): Element | null {
 }
 
 export function getMembersList(): Element | null {
-    // Old: membersWrap → Now: "members" in module 73045
     return q(m.members?.members, '[class*="members_"]');
 }
 
@@ -53,19 +51,15 @@ export function getCallWindow(): Element | null {
 }
 
 export function getSettingsContainer(): Element | null {
-    const selector = m.user?.buttons
-        ? `.${m.user.buttons}`
-        : '[class*="actionButtons"]';
+    const selector = m.user?.buttons ? `.${m.user.buttons}` : '[class*="actionButtons"]';
     const all = document.querySelectorAll(selector);
-    return all.length > 0 ? all[all.length - 1] : null;
+    return all.length > 0 ? all.item(all.length - 1) : null;
 }
 
 export function getMessageInputContainer(): Element | null {
-    const selector = m.input?.buttons
-        ? `.${m.input.buttons}`
-        : '[class*="buttons_"]';
+    const selector = m.input?.buttons ? `.${m.input.buttons}` : '[class*="buttons_"]';
     const all = document.querySelectorAll(selector);
-    return all.length > 0 ? all[all.length - 1] : null;
+    return all.length > 0 ? all.item(all.length - 1) : null;
 }
 
 export function getForumPopout(): Element | null {
@@ -83,8 +77,7 @@ export function getUserArea(): Element | null {
 }
 
 export function getServerList(): Element | null {
-    return q(m.sidebar?.guilds,
-        '[data-list-id="guildsnav"]') ?? document.querySelector('[class*="guilds_"]');
+    return q(m.sidebar?.guilds, '[data-list-id="guildsnav"]') ?? document.querySelector('[class*="guilds_"]');
 }
 
 export function getChannelList(): Element | null {
@@ -104,7 +97,6 @@ export function getSearchPanel(): Element | null {
 }
 
 export function getActivityPanel(): Element | null {
-    // Old: nowPlayingColumn → Now: activityPanel in sidebar module
     return q(m.social?.nowPlayingColumn) ?? q(m.sidebar?.activityPanel);
 }
 
@@ -120,7 +112,6 @@ export function getExpressionPicker(): Element | null {
     return q(m.input?.expressionPickerPositionLayer);
 }
 
-/** Returns all 11 panel elements in index order */
 export function getAllPanels(): (Element | null)[] {
     return [
         getServerList(),

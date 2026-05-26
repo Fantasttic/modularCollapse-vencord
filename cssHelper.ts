@@ -6,9 +6,6 @@
 
 const STYLE_PREFIX = "collapsibleui-";
 
-/**
- * Adds or updates a named <style> element in the document head.
- */
 export function addStyle(id: string, css: string): void {
     const fullId = `${STYLE_PREFIX}${id}`;
     let el = document.getElementById(fullId) as HTMLStyleElement | null;
@@ -22,17 +19,10 @@ export function addStyle(id: string, css: string): void {
     }
 }
 
-/**
- * Removes a named <style> element from the document head.
- */
 export function removeStyle(id: string): void {
-    const fullId = `${STYLE_PREFIX}${id}`;
-    document.getElementById(fullId)?.remove();
+    document.getElementById(`${STYLE_PREFIX}${id}`)?.remove();
 }
 
-/**
- * Removes all ModularCollapse styles from the document head.
- */
 export function clearAllStyles(): void {
     document.querySelectorAll(`style[id^="${STYLE_PREFIX}"]`).forEach(el => el.remove());
 }

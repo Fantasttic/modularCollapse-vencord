@@ -11,10 +11,8 @@ import { getCurrentLabels, ICONS, PANEL_COUNT } from "./constants";
 import { clearAllStyles as clearCSSHelper } from "./cssHelper";
 import * as el from "./elements";
 import * as m from "./modules";
-import { addSettingsListener, getSettings, getShortcutSets, loadSettings, setSetting } from "./settings";
+import { addSettingsListener, getSettings, getShortcutSets, loadSettings, setSetting, settings } from "./settings";
 import * as styles from "./styles";
-
-// ─── Runtime State ───
 
 let toolbarElement: HTMLElement | null = null;
 let dragging: HTMLElement | null = null;
@@ -29,8 +27,6 @@ let settingsButtonsHidden = false;
 let messageInputButtonsHidden = false;
 let toolbarButtonsHidden = false;
 let toolbarFullHidden = false;
-
-// ─── Helpers ───
 
 function isNear(element: Element | null, distance: number, x: number, y: number): boolean {
     const box = element?.getBoundingClientRect();
@@ -49,17 +45,23 @@ function isNear(element: Element | null, distance: number, x: number, y: number)
 
 function getController(): AbortController {
     if (controller && !controller.signal.aborted) return controller;
+    // Always create a fresh controller — the old reference is discarded cleanly
     controller = new AbortController();
     return controller;
 }
 
-/** Safely evaluates a single comparison sub-expression like `innerWidth < 1200` */
+// Evaluates a single comparison: "innerWidth < 1200"
 function evaluateSubExpr(sub: string): boolean {
     const match = sub.trim().match(/^(innerWidth|innerHeight|outerWidth|outerHeight)\s*(<=|>=|<|>|===|==|!==|!=)\s*(\d+(?:\.\d+)?)$/);
     if (!match) return false;
 
     const [, variable, operator, valueStr] = match;
-    const currentVal = window[variable as "innerWidth" | "innerHeight" | "outerWidth" | "outerHeight"];
+    const currentVal =
+        variable === "innerWidth" ? window.innerWidth :
+        variable === "innerHeight" ? window.innerHeight :
+        variable === "outerWidth" ? window.outerWidth :
+        variable === "outerHeight" ? window.outerHeight :
+        0;
     const compareVal = Number(valueStr);
 
     switch (operator) {
@@ -75,62 +77,70 @@ function evaluateSubExpr(sub: string): boolean {
     }
 }
 
-/**
- * Safely evaluates conditional expressions without using eval().
- * Supports: window properties (innerWidth, innerHeight, outerWidth, outerHeight),
- * comparison operators (<, >, <=, >=, ==, ===, !=, !==),
- * logical operators (&& and ||), and numeric literals (including decimals).
- * Examples: "innerWidth < 1200", "innerWidth < 1200 && innerHeight > 600"
- */
+// Evaluates conditional expressions using only window dimension comparisons.
+// Supports &&, ||, and the operators above. No eval() is used.
 function safeEval(expr: string): boolean {
     const cleanExpr = expr.replace(/window\./g, "").replace(/[()]/g, "").trim();
     if (!cleanExpr) return false;
 
-    // Handle && (all conditions must be true)
     if (cleanExpr.includes("&&")) {
         return cleanExpr.split("&&").every(part => {
             const trimmed = part.trim();
-            // Support nested || within && groups
-            if (trimmed.includes("||")) {
+            if (trimmed.includes("||"))
                 return trimmed.split("||").some(sub => evaluateSubExpr(sub));
-            }
             return evaluateSubExpr(trimmed);
         });
     }
-    // Handle || (any condition must be true)
-    if (cleanExpr.includes("||")) {
+    if (cleanExpr.includes("||"))
         return cleanExpr.split("||").some(part => evaluateSubExpr(part));
-    }
+
     return evaluateSubExpr(cleanExpr);
 }
 
-// ─── Toolbar ───
-
 function createToolbarContainer(): void {
+    setTimeout(() => {
+        const parent = el.getToolbar();
+        if (!parent) {
+            let retries = 0;
+            const interval = setInterval(() => {
+                const currentParent = el.getToolbar();
+                if (currentParent) {
+                    clearInterval(interval);
+                    renderToolbar(currentParent);
+                }
+                retries++;
+                if (retries > 15) clearInterval(interval);
+            }, 100);
+            return;
+        }
+        renderToolbar(parent);
+    }, 200);
+}
+
+function renderToolbar(toolbarParent: Element): void {
     toolbarElement?.remove();
 
     const toolbar = document.createElement("div");
     toolbar.className = "cui-toolbar";
 
-    const toolbarParent = el.getToolbar();
     const inviteToolbar = el.getInviteToolbar();
     const searchBar = el.getSearchBar();
 
     try {
         if (inviteToolbar || searchBar) {
-            toolbarParent?.insertBefore(
+            toolbarParent.insertBefore(
                 toolbar,
                 inviteToolbar ? inviteToolbar.nextElementSibling : searchBar
             );
         } else {
-            const nodes = toolbarParent?.childNodes;
+            const nodes = toolbarParent.childNodes;
             if (nodes && nodes.length >= 2)
-                toolbarParent?.insertBefore(toolbar, nodes[nodes.length - 2]);
+                toolbarParent.insertBefore(toolbar, nodes.item(nodes.length - 2));
             else
-                toolbarParent?.appendChild(toolbar);
+                toolbarParent.appendChild(toolbar);
         }
     } catch {
-        toolbarParent?.appendChild(toolbar);
+        toolbarParent.appendChild(toolbar);
     }
 
     toolbarElement = toolbar;
@@ -139,7 +149,7 @@ function createToolbarContainer(): void {
         const s = getSettings();
         for (let i = 1; i <= s.buttonIndexes.length; i++) {
             for (let j = 0; j < s.buttonIndexes.length; j++) {
-                if (i === s.buttonIndexes[j] && el.getAllPanels()[j])
+                if (i === s.buttonIndexes.at(j) && (!s.collapseDisabledButtons || el.getAllPanels().at(j)))
                     createToolbarButton(j);
             }
         }
@@ -149,24 +159,45 @@ function createToolbarContainer(): void {
 function createToolbarButton(index: number): void {
     const s = getSettings();
     const labels = getCurrentLabels();
-    const shortcutKeys = s.shortcutList[index]
+    const shortcutKeys = (s.shortcutList.at(index) ?? [])
         .map(e => (e.length === 1 ? e.toUpperCase() : e))
         .join("+");
-    const text = `${labels[index]} (${shortcutKeys})`;
+    const text = `${labels.at(index)} (${shortcutKeys})`;
 
     const button = document.createElement("div");
     button.id = `cui-icon-${index}`;
-    button.className = `${m.icons?.iconWrapper} ${m.icons?.clickable} ${s.buttonsActive[index] ? m.icons?.selected : ""}`;
+    button.className = `${m.icons?.iconWrapper} ${m.icons?.clickable} ${(s.buttonsActive.at(index) ?? false) ? m.icons?.selected : ""}`;
     button.setAttribute("role", "button");
     button.setAttribute("aria-label", text);
     button.setAttribute("tabindex", "0");
     button.title = text;
-    button.innerHTML = `
-        <svg x="0" y="0" class="${m.icons?.icon}" aria-hidden="false" role="img"
-             xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-            ${ICONS[index]}
-        </svg>
-    `;
+
+    // Build the SVG via DOM API to avoid innerHTML injection risks
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("x", "0");
+    svg.setAttribute("y", "0");
+    svg.setAttribute("class", m.icons?.icon ?? "");
+    svg.setAttribute("aria-hidden", "false");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("width", "24");
+    svg.setAttribute("height", "24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    
+    // Parse the trusted static SVG path string using DOMParser to avoid direct innerHTML on elements
+    const iconMarkup = ICONS.at(index);
+    if (iconMarkup) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + iconMarkup + '</svg>', "image/svg+xml");
+        const paths = doc.documentElement.childNodes;
+        for (let k = 0; k < paths.length; k++) {
+            const child = paths.item(k);
+            if (child instanceof Element) {
+                svg.appendChild(document.importNode(child, true));
+            }
+        }
+    }
+    button.appendChild(svg);
 
     button.addEventListener("click", () => toggleButton(index));
     toolbarElement?.appendChild(button);
@@ -180,11 +211,9 @@ function toggleButton(index: number): void {
         toolbarElement?.querySelector(`#cui-icon-${index}`)?.classList.toggle(selectedClass);
     }
     const newActive = [...s.buttonsActive];
-    newActive[index] = !newActive[index];
+    newActive.splice(index, 1, !(s.buttonsActive.at(index) ?? false));
     setSetting("buttonsActive", newActive);
 }
-
-// ─── Tick Functions ───
 
 function tickExpandOnHover(x: number, y: number): void {
     const s = getSettings();
@@ -192,18 +221,18 @@ function tickExpandOnHover(x: number, y: number): void {
 
     const panels = el.getAllPanels();
     for (let i = 0; i < PANEL_COUNT; i++) {
-        if (!s.collapseDisabledButtons && s.buttonIndexes[i] === 0) continue;
-        if (!s.expandOnHoverEnabled[i]) continue;
-        if (s.buttonsActive[i]) continue;
+        if (!s.collapseDisabledButtons && s.buttonIndexes.at(i) === 0) continue;
+        if (!s.expandOnHoverEnabled.at(i)) continue;
+        if (s.buttonsActive.at(i)) continue;
 
-        if (isNear(panels[i], s.expandOnHoverFudgeFactor, x, y)) {
-            if (collapsed[i]) {
-                if (s.floatingPanels && s.floatingEnabled[i] === "hover")
+        if (isNear(panels.at(i) ?? null, s.expandOnHoverFudgeFactor, x, y)) {
+            if (collapsed.at(i)) {
+                if (s.floatingPanels && s.floatingEnabled.at(i) === "hover")
                     styles.floatPanel(i);
                 styles.collapseElementDynamic(i, false, collapsed);
             }
         } else {
-            if (!collapsed[i]) {
+            if (!collapsed.at(i)) {
                 if (el.getBiteSizePanel() || el.getRightClickMenu() ||
                     el.getForumPreviewTooltip() || el.getExpressionPicker()) {
                     styles.collapseElementDynamic(i, false, collapsed);
@@ -261,10 +290,11 @@ function tickCollapseToolbar(x: number, y: number, full: boolean): void {
 function tickKeyboardShortcuts(): void {
     const shortcuts = getShortcutSets();
     for (let i = 0; i < PANEL_COUNT; i++) {
-        if (keys.size === shortcuts[i].size) {
+        const currentShortcut = shortcuts.at(i);
+        if (currentShortcut && keys.size === currentShortcut.size) {
             let match = true;
             for (const k of keys) {
-                if (!shortcuts[i].has(k)) { match = false; break; }
+                if (!currentShortcut.has(k)) { match = false; break; }
             }
             if (match) toggleButton(i);
         }
@@ -276,37 +306,38 @@ function checkConditionalCollapse(): void {
     if (!s.conditionalCollapse) return;
 
     for (let i = 0; i < PANEL_COUNT; i++) {
-        if (s.collapseConditionals[i]) {
+        const conditional = s.collapseConditionals.at(i);
+        if (conditional) {
             try {
-                if (safeEval(s.collapseConditionals[i])) {
-                    if (!collapsed[i]) styles.collapseElementDynamic(i, true, collapsed);
+                if (safeEval(conditional)) {
+                    if (!collapsed.at(i)) styles.collapseElementDynamic(i, true, collapsed);
                 } else {
-                    if (collapsed[i]) styles.collapseElementDynamic(i, false, collapsed);
+                    if (collapsed.at(i)) styles.collapseElementDynamic(i, false, collapsed);
                 }
             } catch { /* ignore invalid expressions */ }
         }
     }
 }
 
-/** Trailing-edge throttle: ensures the last call is always executed */
+// Trailing-edge throttle: always runs the most recent call after the cooldown.
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
-    let lastArgs: any[] | null = null;
+    let pending: any[] | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
     return function (this: any, ...args: any[]) {
-        lastArgs = args;
-        if (!timer) {
-            func.apply(this, lastArgs);
-            lastArgs = null;
-            timer = setTimeout(() => {
-                if (lastArgs) func.apply(this, lastArgs);
-                lastArgs = null;
-                timer = null;
-            }, limit);
-        }
+        pending = args;
+        if (timer) return;
+        func.apply(this, pending);
+        pending = null;
+        timer = setTimeout(() => {
+            timer = null;
+            if (pending) {
+                const captured = pending;
+                pending = null;
+                func.apply(this, captured);
+            }
+        }, limit);
     } as any;
 }
-
-// ─── Event Listeners ───
 
 function addListeners(): void {
     const ctrl = getController();
@@ -336,7 +367,6 @@ function addListeners(): void {
         const s = getSettings();
 
         if (e.button === 2) {
-            // Right-click resets panel width to default
             const target = e.target as HTMLElement;
             const resetPanel = (settingKey: keyof typeof s, defaultValue: number) => {
                 setSetting(settingKey as any, defaultValue);
@@ -357,27 +387,31 @@ function addListeners(): void {
             else if (target.classList?.contains(m.popout?.chatLayerWrapper))
                 resetPanel("forumPopoutWidth", s.defaultForumPopoutWidth);
         } else {
-            // Left-click finish resize
             if (!dragging) return;
             const d = dragging;
             dragging = null;
             draggingRect = null;
 
+            const parsedW = (raw: string, fallback: number) => {
+                const n = parseInt(raw, 10);
+                return Number.isNaN(n) ? fallback : n;
+            };
+
             if (d.classList?.contains(m.sidebar?.sidebarList)) {
-                setSetting("channelListWidth", parseInt(d.style.width) || s.defaultChannelListWidth);
+                setSetting("channelListWidth", parsedW(d.style.width, s.defaultChannelListWidth));
                 document.documentElement.style.removeProperty("--cui-channel-list-handle-offset");
                 document.documentElement.style.removeProperty("--cui-channel-list-handle-transition");
             }
             if (d.classList?.contains(m.members?.members))
-                setSetting("membersListWidth", parseInt(d.style.width) || s.defaultMembersListWidth);
+                setSetting("membersListWidth", parsedW(d.style.width, s.defaultMembersListWidth));
             if (d.classList?.contains(m.panel?.outer))
-                setSetting("userProfileWidth", parseInt(d.style.width) || s.defaultUserProfileWidth);
+                setSetting("userProfileWidth", parsedW(d.style.width, s.defaultUserProfileWidth));
             if (d.classList?.contains(m.search?.searchResultsWrap))
-                setSetting("searchPanelWidth", parseInt(d.style.width) || s.defaultSearchPanelWidth);
+                setSetting("searchPanelWidth", parsedW(d.style.width, s.defaultSearchPanelWidth));
             if (d.classList?.contains(m.social?.nowPlayingColumn))
-                setSetting("activityPanelWidth", parseInt(d.style.width) || s.defaultActivityPanelWidth);
+                setSetting("activityPanelWidth", parsedW(d.style.width, s.defaultActivityPanelWidth));
             if (d.classList?.contains(m.popout?.chatLayerWrapper))
-                setSetting("forumPopoutWidth", parseInt(d.style.width) || s.defaultForumPopoutWidth);
+                setSetting("forumPopoutWidth", parsedW(d.style.width, s.defaultForumPopoutWidth));
 
             d.style.removeProperty("width");
             d.style.removeProperty("max-width");
@@ -400,6 +434,8 @@ function addListeners(): void {
         throttledHoverChecks(e.clientX, e.clientY);
 
         if (!dragging || !draggingRect) return;
+        // The element may have been removed from the DOM by the mutation observer mid-drag
+        if (!document.contains(dragging)) { dragging = null; draggingRect = null; return; }
 
         const isLeftPanel = dragging.classList?.contains(m.sidebar?.sidebarList);
         let width = isLeftPanel
@@ -440,10 +476,14 @@ function addListeners(): void {
     }, { passive: true, signal: ctrl.signal });
 }
 
-// ─── Observer ───
-
 function createObserver(): MutationObserver {
     return new MutationObserver(mutationList => { try {
+        if (!toolbarElement || !document.contains(toolbarElement) || !document.querySelector(".cui-toolbar")) {
+            const parent = el.getToolbar();
+            if (parent) {
+                createToolbarContainer();
+            }
+        }
         for (const mutation of mutationList) {
             for (const node of mutation.addedNodes) {
                 if (!(node instanceof HTMLElement)) continue;
@@ -473,8 +513,6 @@ function createObserver(): MutationObserver {
     } catch {} });
 }
 
-// ─── Lifecycle ───
-
 function initialize(): void {
     try {
         styles.initAllStyles();
@@ -503,8 +541,6 @@ function partialReload(): void {
     }, 250);
 }
 
-// ─── Plugin Definition ───
-
 export default definePlugin({
     name: "ModularCollapse",
     description: "A feature-rich plugin that reworks the Discord UI to be significantly more modular. Collapse, resize, and float UI panels.",
@@ -513,6 +549,7 @@ export default definePlugin({
         Devs.Fantasttic,
     ],
     requiresRestart: false,
+    settings: settings,
 
     start() {
         loadSettings().then(() => {
@@ -561,7 +598,6 @@ export default definePlugin({
         console.info("[ModularCollapse] Disabled");
     },
 
-    // Listen for channel/page switches via Flux dispatcher
     flux: {
         CHANNEL_SELECT() {
             createToolbarContainer();

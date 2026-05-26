@@ -10,12 +10,25 @@ import * as el from "./elements";
 import * as m from "./modules";
 import { getSettings } from "./settings";
 
-const NAME = "ModularCollapse";
+// Clamp a setting value to a safe CSS number. Returns 0 for NaN/Infinity.
+function cssNum(val: number, min = 0, max = 9999): number {
+    if (!Number.isFinite(val)) return min;
+    return Math.max(min, Math.min(max, val));
+}
 
-// ─── Root & Variable Styles ───
+// Robust fallback selector helper. If the Webpack class name is missing,
+// it uses a wildcard attribute selector.
+function cls(className: string | undefined, fallbackSelector: string): string {
+    return className ? `.${className}` : fallbackSelector;
+}
 
 export function initRootStyles(): void {
-    const s = getSettings();
+    const iconsWrapperSelected = `${cls(m.icons?.iconWrapper, '[class*="iconWrapper_"]')}${cls(m.icons?.selected, '[class*="selected_"]')}`;
+    const threadsGrid = cls(m.threads?.grid, '[class*="grid_"]');
+    const threadsList = cls(m.threads?.list, '[class*="list_"]');
+    const threadsHeader = cls(m.threads?.headerRow, '[class*="headerRow_"]');
+    const sidebarList = cls(m.sidebar?.sidebarList, '[class*="sidebarList_"]');
+
     addStyle("root", `
         :root {
             --fst-server-list-collapsed: 0;
@@ -30,16 +43,16 @@ export function initRootStyles(): void {
             gap: var(--space-xs);
             transition: gap var(--cui-transition-speed) !important;
         }
-        .${m.icons?.iconWrapper}.${m.icons?.selected}:not([id*="cui"]):has([d="M14.5 8a3 3 0 1 0-2.7-4.3c-.2.4.06.86.44 1.12a5 5 0 0 1 2.14 3.08c.01.06.06.1.12.1ZM18.44 17.27c.15.43.54.73 1 .73h1.06c.83 0 1.5-.67 1.5-1.5a7.5 7.5 0 0 0-6.5-7.43c-.55-.08-.99.38-1.1.92-.06.3-.15.6-.26.87-.23.58-.05 1.3.47 1.63a9.53 9.53 0 0 1 3.83 4.78ZM12.5 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 20.5a7.5 7.5 0 0 1 15 0c0 .83-.67 1.5-1.5 1.5a.2.2 0 0 1-.2-.16c-.2-.96-.56-1.87-.88-2.54-.1-.23-.42-.15-.42.1v2.1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2.1c0-.25-.31-.33-.42-.1-.32.67-.67 1.58-.88 2.54a.2.2 0 0 1-.2.16A1.5 1.5 0 0 1 2 20.5Z"]),
-        .${m.icons?.iconWrapper}.${m.icons?.selected}:not([id*="cui"]):has([d="M23 12.38c-.02.38-.45.58-.78.4a6.97 6.97 0 0 0-6.27-.08.54.54 0 0 1-.44 0 8.97 8.97 0 0 0-11.16 3.55c-.1.15-.1.35 0 .5.37.58.8 1.13 1.28 1.61.24.24.64.15.8-.15.19-.38.39-.73.58-1.02.14-.21.43-.1.4.15l-.19 1.96c-.02.19.07.37.23.47A8.96 8.96 0 0 0 12 21a.4.4 0 0 1 .38.27c.1.33.25.65.4.95.18.34-.02.76-.4.77L12 23a11 11 0 1 1 11-10.62ZM15.5 7.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"]) {
+        ${iconsWrapperSelected}:not([id*="cui"]):has([d="M14.5 8a3 3 0 1 0-2.7-4.3c-.2.4.06.86.44 1.12a5 5 0 0 1 2.14 3.08c.01.06.06.1.12.1ZM18.44 17.27c.15.43.54.73 1 .73h1.06c.83 0 1.5-.67 1.5-1.5a7.5 7.5 0 0 0-6.5-7.43c-.55-.08-.99.38-1.1.92-.06.3-.15.6-.26.87-.23.58-.05 1.3.47 1.63a9.53 9.53 0 0 1 3.83 4.78ZM12.5 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 20.5a7.5 7.5 0 0 1 15 0c0 .83-.67 1.5-1.5 1.5a.2.2 0 0 1-.2-.16c-.2-.96-.56-1.87-.88-2.54-.1-.23-.42-.15-.42.1v2.1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2.1c0-.25-.31-.33-.42-.1-.32.67-.67 1.58-.88 2.54a.2.2 0 0 1-.2.16A1.5 1.5 0 0 1 2 20.5Z"]),
+        ${iconsWrapperSelected}:not([id*="cui"]):has([d="M23 12.38c-.02.38-.45.58-.78.4a6.97 6.97 0 0 0-6.27-.08.54.54 0 0 1-.44 0 8.97 8.97 0 0 0-11.16 3.55c-.1.15-.1.35 0 .5.37.58.8 1.13 1.28 1.61.24.24.64.15.8-.15.19-.38.39-.73.58-1.02.14-.21.43-.1.4.15l-.19 1.96c-.02.19.07.37.23.47A8.96 8.96 0 0 0 12 21a.4.4 0 0 1 .38.27c.1.33.25.65.4.95.18.34-.02.76-.4.77L12 23a11 11 0 1 1 11-10.62ZM15.5 7.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"]) {
             display: none;
         }
-        .${m.threads?.grid}>div:first-child,
-        .${m.threads?.list}>div:first-child,
-        .${m.threads?.headerRow} {
+        ${threadsGrid}>div:first-child,
+        ${threadsList}>div:first-child,
+        ${threadsHeader} {
             min-width: 0px !important;
         }
-        .${m.sidebar?.sidebarList} {
+        ${sidebarList} {
             container-type: unset !important;
         }
     `.replace(/\s+/g, " "));
@@ -51,14 +64,14 @@ export function updateVariables(): void {
     const s = getSettings();
     addStyle("vars", `
         :root {
-            --cui-transition-speed: ${s.transitionSpeed}ms;
-            --cui-collapse-size: ${s.collapseSize}px;
-            --cui-channel-list-width: ${s.channelListWidth || s.defaultChannelListWidth}px;
-            --cui-members-list-width: ${s.membersListWidth || s.defaultMembersListWidth}px;
-            --cui-user-profile-width: ${s.userProfileWidth || s.defaultUserProfileWidth}px;
-            --cui-search-panel-width: ${s.searchPanelWidth || s.defaultSearchPanelWidth}px;
-            --cui-forum-popout-width: ${s.forumPopoutWidth || s.defaultForumPopoutWidth}px;
-            --cui-activity-panel-width: ${s.activityPanelWidth || s.defaultActivityPanelWidth}px;
+            --cui-transition-speed: ${cssNum(s.transitionSpeed, 0, 5000)}ms;
+            --cui-collapse-size: ${cssNum(s.collapseSize, 0, 500)}px;
+            --cui-channel-list-width: ${cssNum(s.channelListWidth || s.defaultChannelListWidth, 80, 2000)}px;
+            --cui-members-list-width: ${cssNum(s.membersListWidth || s.defaultMembersListWidth, 80, 2000)}px;
+            --cui-user-profile-width: ${cssNum(s.userProfileWidth || s.defaultUserProfileWidth, 80, 2000)}px;
+            --cui-search-panel-width: ${cssNum(s.searchPanelWidth || s.defaultSearchPanelWidth, 80, 2000)}px;
+            --cui-forum-popout-width: ${cssNum(s.forumPopoutWidth || s.defaultForumPopoutWidth, 80, 2000)}px;
+            --cui-activity-panel-width: ${cssNum(s.activityPanelWidth || s.defaultActivityPanelWidth, 80, 2000)}px;
             --cui-forum-panel-top: ${(el.getNoChat()) ? "0px" : "var(--custom-channel-header-height)"};
             --cui-compat-hsl: 1;
         }
@@ -70,9 +83,6 @@ export function clearRootStyles(): void {
     removeStyle("vars");
 }
 
-// ─── Panel collapse styles ───
-// Each panel has: init, toggle, float, queryToggle, clear
-
 interface PanelStyleState {
     toggled: boolean;
 }
@@ -80,37 +90,44 @@ interface PanelStyleState {
 const panelStates: PanelStyleState[] = Array.from({ length: PANEL_COUNT }, () => ({ toggled: true }));
 
 export function getPanelState(index: number): PanelStyleState {
-    return panelStates[index];
+    return panelStates.at(index)!;
 }
-
-// ─── Server List ───
 
 function serverListInit(): void {
     const s = getSettings();
+    const guildsSelector = cls(m.sidebar?.guilds, '[class*="guilds_"]');
+    const sidebarContent = cls(m.sidebar?.content, '[class*="sidebar_"] [class*="content_"]');
+    const treeScroller = cls(m.scroller?.tree, '[class*="tree_"]');
+
     addStyle("serverList_init", `
         :root { --cui-server-list-toggled: 1; }
-        .${m.sidebar?.guilds} {
+        ${guildsSelector} {
             transition: width var(--cui-transition-speed);
             border-right: calc(1px * var(--cui-channel-list-toggled)) solid var(--border-subtle) !important;
             border-top: 1px solid var(--app-border-frame) !important;
         }
-        .${m.scroller?.tree} { padding-top: var(--space-xs) !important; }
-        .${m.sidebar?.content} { transition: margin-top var(--cui-transition-speed); }
+        ${treeScroller} { padding-top: var(--space-xs) !important; }
+        ${sidebarContent} { transition: margin-top var(--cui-transition-speed); }
     `.replace(/\s+/g, " "));
 }
 
 function serverListToggleCSS(): string {
+    const guildsSelector = cls(m.sidebar?.guilds, '[class*="guilds_"]');
+    const sidebarContent = cls(m.sidebar?.content, '[class*="sidebar_"] [class*="content_"]');
+
     return `
         :root { --cui-server-list-toggled: 0; }
-        .${m.sidebar?.guilds} { width: var(--cui-collapse-size) !important; border: 0 !important; }
-        .${m.sidebar?.content} { margin-top: 0px !important; }
+        ${guildsSelector} { width: var(--cui-collapse-size) !important; border: 0 !important; }
+        ${sidebarContent} { margin-top: 0px !important; }
     `.replace(/\s+/g, " ");
 }
 
 function serverListFloatCSS(): string {
+    const guildsSelector = cls(m.sidebar?.guilds, '[class*="guilds_"]');
+
     return `
         :root { --cui-server-list-toggled: 0; }
-        .${m.sidebar?.guilds} {
+        ${guildsSelector} {
             position: absolute !important; z-index: 192 !important;
             min-height: 100% !important; height: 100% !important; max-height: 100% !important;
             overflow-y: scroll !important;
@@ -118,17 +135,24 @@ function serverListFloatCSS(): string {
     `.replace(/\s+/g, " ");
 }
 
-// ─── Channel List ───
-
 function channelListInit(): void {
     const s = getSettings();
+    const sidebarList = cls(m.sidebar?.sidebarList, '[class*="sidebarList_"]');
+    const sidebarResizeHandle = cls(m.sidebar?.sidebarResizeHandle, '[class*="sidebarResizeHandle_"]');
+    const sidebarContainer = cls(m.sidebar?.sidebar, '[class*="sidebar_"]');
+    const guildsSubtitle = cls(m.guilds?.subtitleContainer, '[class*="subtitleContainer_"]');
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const socialTabBody = cls(m.social?.tabBody, '[class*="tabBody_"]');
+    const channelsChannel = cls(m.channels?.channel, '[class*="channel_"]');
+    const iconsContainer = cls(m.icons?.container, '[class*="iconsContainer_"]');
+
     addStyle("channelList_init", `
         :root {
             --cui-channel-list-handle-offset: calc(var(--cui-channel-list-width) - 12px);
             --cui-channel-list-handle-transition: left var(--cui-transition-speed);
             --cui-channel-list-toggled: 1;
         }
-        .${m.sidebar?.sidebarList} {
+        ${sidebarList} {
             max-width: var(--cui-channel-list-width) !important;
             width: var(--cui-channel-list-width) !important;
             min-width: var(--cui-channel-list-width) !important;
@@ -139,14 +163,14 @@ function channelListInit(): void {
             border-left: none !important;
             border-radius: 0 !important;
         }
-        .${m.sidebar?.sidebarList} > * { overflow: hidden !important; margin-left: 0 !important; }
-        .${m.sidebar?.sidebarResizeHandle} { display: none !important; }
-        .${m.sidebar?.sidebar} { overflow: visible !important; border: none !important; }
-        .${m.guilds?.subtitleContainer}, .${m.guilds?.content}, .${m.social?.tabBody} { border-left: none !important; }
-        .${m.channels?.channel} { max-width: 100% !important; }
-        .${m.icons?.container} { border-left: 0 !important; }
-        ${s.channelListWidth ? `
-            .${m.sidebar?.sidebarList}:before {
+        ${sidebarList} > * { overflow: hidden !important; margin-left: 0 !important; }
+        ${sidebarResizeHandle} { display: none !important; }
+        ${sidebarContainer} { overflow: visible !important; border: none !important; }
+        ${guildsSubtitle}, ${guildsContent}, ${socialTabBody} { border-left: none !important; }
+        ${channelsChannel} { max-width: 100% !important; }
+        ${iconsContainer} { border-left: 0 !important; }
+        ${cssNum(s.channelListWidth) ? `
+            ${sidebarList}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; left: var(--cui-channel-list-handle-offset);
                 transition: var(--cui-channel-list-handle-transition);
@@ -157,42 +181,48 @@ function channelListInit(): void {
 
 function channelListToggleCSS(): string {
     const s = getSettings();
+    const sidebarList = cls(m.sidebar?.sidebarList, '[class*="sidebarList_"]');
+
     return `
         :root { --cui-channel-list-toggled: 0; }
-        .${m.sidebar?.sidebarList} {
+        ${sidebarList} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
         }
-        ${s.channelListWidth ? `.${m.sidebar?.sidebarList}:before { left: -4px; }` : ""}
+        ${s.channelListWidth ? `${sidebarList}:before { left: -4px; }` : ""}
     `.replace(/\s+/g, " ");
 }
 
 function channelListFloatCSS(): string {
+    const sidebarList = cls(m.sidebar?.sidebarList, '[class*="sidebarList_"]');
+
     return `
-        .${m.sidebar?.sidebarList} {
+        ${sidebarList} {
             position: absolute !important; z-index: 190 !important;
             max-height: 100% !important; height: 100% !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Members List ───
-
 function membersListInit(): void {
     const s = getSettings();
+    const membersList = cls(m.members?.members, '[class*="members_"]');
+    const membersMember = cls(m.members?.member, '[class*="member_"]');
+    const gameContainer = cls(m.game?.container, '[class*="gameContainer_"]');
+
     addStyle("membersList_init", `
-        .${m.members?.members} {
+        ${membersList} {
             max-width: var(--cui-members-list-width) !important;
             width: var(--cui-members-list-width) !important;
             min-width: var(--cui-members-list-width) !important;
             transition: max-width var(--cui-transition-speed), width var(--cui-transition-speed), min-width var(--cui-transition-speed), padding var(--cui-transition-speed);
             min-height: 100% !important;
         }
-        .${m.members?.members} > * { width: 100% !important; }
-        .${m.members?.member}, .${m.game?.container} { max-width: 100% !important; }
-        ${s.membersListWidth ? `
-            .${m.members?.members}:before {
+        ${membersList} > * { width: 100% !important; }
+        ${membersMember}, ${gameContainer} { max-width: 100% !important; }
+        ${cssNum(s.membersListWidth) ? `
+            ${membersList}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; left: -4px;
             }
@@ -201,8 +231,10 @@ function membersListInit(): void {
 }
 
 function membersListToggleCSS(): string {
+    const membersList = cls(m.members?.members, '[class*="members_"]');
+
     return `
-        .${m.members?.members} {
+        ${membersList} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
@@ -212,8 +244,10 @@ function membersListToggleCSS(): string {
 }
 
 function membersListFloatCSS(): string {
+    const membersList = cls(m.members?.members, '[class*="members_"]');
+
     return `
-        .${m.members?.members} {
+        ${membersList} {
             position: absolute !important; z-index: 190 !important;
             max-height: 100% !important; height: 100% !important;
             right: 0 !important; border-left: 1px solid var(--border-subtle) !important;
@@ -221,11 +255,13 @@ function membersListFloatCSS(): string {
     `.replace(/\s+/g, " ");
 }
 
-// ─── User Profile ───
-
 function userProfileInit(): void {
     const s = getSettings();
-    const panelPath = `.${m.guilds?.content} .${m.panel?.outer}`;
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const panelOuter = '[class*="userProfileOuter_"], [class*="profilePanel_"], [class*="outer_"]';
+    const panelInner = '[class*="userProfileInner_"], [class*="inner_"]';
+    const panelPath = `${guildsContent} ${panelOuter}`;
+
     addStyle("userProfile_init", `
         ${panelPath} {
             max-width: var(--cui-user-profile-width) !important;
@@ -234,9 +270,9 @@ function userProfileInit(): void {
             transition: max-width var(--cui-transition-speed), width var(--cui-transition-speed), min-width var(--cui-transition-speed);
             min-height: 100% !important;
         }
-        ${panelPath} .${m.panel?.inner} { border-left: 1px solid var(--border-subtle) !important; }
+        ${panelPath} ${panelInner} { border-left: 1px solid var(--border-subtle) !important; }
         ${panelPath} > * { width: 100% !important; }
-        ${s.userProfileWidth ? `
+        ${cssNum(s.userProfileWidth) ? `
             ${panelPath}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; left: -4px;
@@ -246,8 +282,11 @@ function userProfileInit(): void {
 }
 
 function userProfileToggleCSS(): string {
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const panelOuter = '[class*="userProfileOuter_"], [class*="profilePanel_"], [class*="outer_"]';
+
     return `
-        .${m.guilds?.content} .${m.panel?.outer} {
+        ${guildsContent} ${panelOuter} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
@@ -256,19 +295,22 @@ function userProfileToggleCSS(): string {
 }
 
 function userProfileFloatCSS(): string {
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const panelOuter = '[class*="userProfileOuter_"], [class*="profilePanel_"], [class*="outer_"]';
+
     return `
-        .${m.guilds?.content} .${m.panel?.outer} {
+        ${guildsContent} ${panelOuter} {
             position: absolute !important; z-index: 190 !important;
             max-height: 100% !important; height: 100% !important; right: 0 !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Message Input ───
-
 function messageInputInit(): void {
+    const guildsForm = cls(m.guilds?.form, 'form[class*="form_"]');
+
     addStyle("messageInput_init", `
-        .${m.guilds?.form} {
+        ${guildsForm} {
             max-height: calc(var(--custom-channel-textarea-text-area-max-height) + 24px) !important;
             transition: max-height var(--cui-transition-speed) !important;
         }
@@ -276,16 +318,20 @@ function messageInputInit(): void {
 }
 
 function messageInputToggleCSS(): string {
+    const guildsForm = cls(m.guilds?.form, 'form[class*="form_"]');
+
     return `
-        .${m.guilds?.form}:not(:has([data-slate-string="true"])):not(:has([data-list-id="attachments"])) {
+        ${guildsForm}:not(:has([data-slate-string="true"])):not(:has([data-list-id="attachments"])) {
             max-height: var(--cui-collapse-size) !important; overflow: hidden !important;
         }
     `.replace(/\s+/g, " ");
 }
 
 function messageInputFloatCSS(): string {
+    const guildsForm = cls(m.guilds?.form, 'form[class*="form_"]');
+
     return `
-        .${m.guilds?.form} {
+        ${guildsForm} {
             position: absolute !important;
             filter: drop-shadow(0px 0px 2px var(--opacity-black-16));
             left: 0 !important; right: 0 !important; bottom: 0 !important;
@@ -293,53 +339,62 @@ function messageInputFloatCSS(): string {
     `.replace(/\s+/g, " ");
 }
 
-// ─── Window Bar ───
-
 function windowBarInit(): void {
+    const frameBar = cls(m.frame?.bar, '[class*="titleBar_"]');
+    const sidebarBase = cls(m.sidebar?.base, '[class*="base_"]');
+
     addStyle("windowBar_init", `
-        .${m.frame?.bar} {
+        ${frameBar} {
             min-height: var(--custom-app-top-bar-height) !important;
             height: var(--custom-app-top-bar-height) !important;
             max-height: var(--custom-app-top-bar-height) !important;
             transition: min-height var(--cui-transition-speed), height var(--cui-transition-speed), max-height var(--cui-transition-speed) !important;
         }
-        .${m.sidebar?.base} { transition: grid-template-rows var(--cui-transition-speed) !important; }
+        ${sidebarBase} { transition: grid-template-rows var(--cui-transition-speed) !important; }
     `.replace(/\s+/g, " "));
 }
 
 function windowBarToggleCSS(): string {
+    const frameBar = cls(m.frame?.bar, '[class*="titleBar_"]');
+    const sidebarBase = cls(m.sidebar?.base, '[class*="base_"]');
+
     return `
-        .${m.frame?.bar} {
+        ${frameBar} {
             overflow: hidden !important;
             min-height: var(--cui-collapse-size) !important;
             height: var(--cui-collapse-size) !important;
             max-height: var(--cui-collapse-size) !important;
             --custom-app-top-bar-height: calc(24px + var(--space-8));
         }
-        .${m.sidebar?.base} { --custom-app-top-bar-height: var(--cui-collapse-size); }
+        ${sidebarBase} { --custom-app-top-bar-height: var(--cui-collapse-size); }
     `.replace(/\s+/g, " ");
 }
 
 function windowBarFloatCSS(): string {
+    const frameBar = cls(m.frame?.bar, '[class*="titleBar_"]');
+    const sidebarBase = cls(m.sidebar?.base, '[class*="base_"]');
+
     return `
-        .${m.frame?.bar} {
+        ${frameBar} {
             position: absolute !important; top: 0 !important; left: 0 !important;
             right: 0 !important; background: var(--bg-base-tertiary) !important;
             z-index: 200 !important; --custom-app-top-bar-height: calc(24px + var(--space-8));
             border-bottom: 1px solid var(--app-border-frame) !important;
         }
-        .${m.sidebar?.base} { --custom-app-top-bar-height: var(--cui-collapse-size); }
+        ${sidebarBase} { --custom-app-top-bar-height: var(--cui-collapse-size); }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Call Window ───
-
 function callWindowInit(): void {
+    const callsWrapper = cls(m.calls?.wrapper, '[class*="callContainer_"]');
+    const callsNoChat = cls(m.calls?.noChat, '[class*="noChat_"]');
+    const callContainer = cls(m.calls?.callContainer, '[class*="callContainer_"]');
+
     addStyle("callWindow_init", `
-        .${m.calls?.wrapper}:not(.${m.calls?.noChat}) {
+        ${callsWrapper}:not(${callsNoChat}) {
             transition: min-height var(--cui-transition-speed), max-height var(--cui-transition-speed) !important;
         }
-        .${m.calls?.wrapper}:not(.${m.calls?.noChat}) > .${m.calls?.callContainer} {
+        ${callsWrapper}:not(${callsNoChat}) > ${callContainer} {
             border-left: none !important; border-top: none !important;
             border-bottom: 1px solid var(--border-subtle) !important;
         }
@@ -347,22 +402,26 @@ function callWindowInit(): void {
 }
 
 function callWindowToggleCSS(): string {
+    const callsWrapper = cls(m.calls?.wrapper, '[class*="callContainer_"]');
+    const callsNoChat = cls(m.calls?.noChat, '[class*="noChat_"]');
+
     return `
-        .${m.calls?.wrapper}:not(.${m.calls?.noChat}) {
+        ${callsWrapper}:not(${callsNoChat}) {
             min-height: var(--cui-collapse-size) !important;
             max-height: var(--cui-collapse-size) !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── User Area ───
-
 function userAreaInit(): void {
     const s = getSettings();
+    const sidebarPanels = cls(m.sidebar?.panels, '[class*="panels_"]');
+    const userAreaActions = cls(m.userAreaButtons?.actionButtons, '[class*="actionButtons_"]');
+
     addStyle("userArea_init", `
-        .${m.sidebar?.panels} {
+        ${sidebarPanels} {
             transition: max-height var(--cui-transition-speed), width var(--cui-transition-speed), border var(--cui-transition-speed) !important;
-            max-height: ${s.userAreaMaxHeight}px !important;
+            max-height: ${cssNum(s.userAreaMaxHeight, 80, 2000)}px !important;
             width: calc((var(--cui-channel-list-width) * var(--cui-channel-list-toggled)) + (var(--custom-guild-list-width) * var(--cui-server-list-toggled) * var(--cui-compat-hsl) * (1 - var(--fst-server-list-collapsed))) - (var(--space-xs) * 2)) !important;
             border-left-width: clamp(0px, calc(1px * ((var(--cui-server-list-toggled) * var(--cui-compat-hsl) * (1 - var(--fst-server-list-collapsed))) + var(--cui-channel-list-toggled))), 1px) !important;
             border-right-width: clamp(0px, calc(1px * ((var(--cui-server-list-toggled) * var(--cui-compat-hsl) * (1 - var(--fst-server-list-collapsed))) + var(--cui-channel-list-toggled))), 1px) !important;
@@ -370,13 +429,15 @@ function userAreaInit(): void {
             z-index: 191 !important;
             overflow: hidden !important;
         }
-        .${m.userAreaButtons?.actionButtons} button { padding: 0 !important; }
+        ${userAreaActions} button { padding: 0 !important; }
     `.replace(/\s+/g, " "));
 }
 
 function userAreaToggleCSS(): string {
+    const sidebarPanels = cls(m.sidebar?.panels, '[class*="panels_"]');
+
     return `
-        .${m.sidebar?.panels} {
+        ${sidebarPanels} {
             max-height: var(--cui-collapse-size) !important;
             border-top-width: 0px !important; border-bottom-width: 0px !important;
             overflow: hidden !important;
@@ -384,12 +445,12 @@ function userAreaToggleCSS(): string {
     `.replace(/\s+/g, " ");
 }
 
-// ─── Search Panel ───
-
 function searchPanelInit(): void {
     const s = getSettings();
+    const searchResultsWrap = cls(m.search?.searchResultsWrap, '[class*="searchResultsWrap_"]');
+
     addStyle("searchPanel_init", `
-        .${m.search?.searchResultsWrap} {
+        ${searchResultsWrap} {
             max-width: var(--cui-search-panel-width) !important;
             width: var(--cui-search-panel-width) !important;
             min-width: var(--cui-search-panel-width) !important;
@@ -397,9 +458,9 @@ function searchPanelInit(): void {
             overflow: visible !important;
             border-left: 1px solid var(--border-subtle) !important;
         }
-        .${m.search?.searchResultsWrap} > header > div:last-child { justify-content: end !important; }
-        ${s.searchPanelWidth ? `
-            .${m.search?.searchResultsWrap}:before {
+        ${searchResultsWrap} > header > div:last-child { justify-content: end !important; }
+        ${cssNum(s.searchPanelWidth) ? `
+            ${searchResultsWrap}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; left: -4px;
             }
@@ -408,8 +469,10 @@ function searchPanelInit(): void {
 }
 
 function searchPanelToggleCSS(): string {
+    const searchResultsWrap = cls(m.search?.searchResultsWrap, '[class*="searchResultsWrap_"]');
+
     return `
-        .${m.search?.searchResultsWrap} {
+        ${searchResultsWrap} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
@@ -418,20 +481,26 @@ function searchPanelToggleCSS(): string {
 }
 
 function searchPanelFloatCSS(): string {
+    const searchResultsWrap = cls(m.search?.searchResultsWrap, '[class*="searchResultsWrap_"]');
+
     return `
-        .${m.search?.searchResultsWrap} {
+        ${searchResultsWrap} {
             position: absolute !important; z-index: 190 !important;
             max-height: 100% !important; height: 100% !important; right: 0 !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Forum Popout ───
-
 function forumPopoutInit(): void {
     const s = getSettings();
+    const chatLayerWrapper = cls(m.popout?.chatLayerWrapper, '[class*="chatLayerWrapper_"]');
+    const popoutContainer = cls(m.popout?.container, '[class*="popoutContainer_"]');
+    const threadSidebarOpen = cls(m.guilds?.threadSidebarOpen, '[class*="threadSidebarOpen_"]');
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const callsNoChat = cls(m.calls?.noChat, '[class*="noChat_"]');
+
     addStyle("forumPopout_init", `
-        .${m.popout?.chatLayerWrapper} {
+        ${chatLayerWrapper} {
             max-width: var(--cui-forum-popout-width) !important;
             width: var(--cui-forum-popout-width) !important;
             min-width: var(--cui-forum-popout-width) !important;
@@ -441,23 +510,23 @@ function forumPopoutInit(): void {
             height: calc(100% - var(--cui-forum-panel-top)) !important;
             max-height: 100% !important; overflow: hidden !important;
         }
-        .${m.popout?.container} {
+        ${popoutContainer} {
             border-top: 1px solid var(--border-subtle) !important;
             border-left: 1px solid var(--border-subtle) !important;
         }
-        .${m.popout?.chatLayerWrapper} > * { width: 100% !important; border-radius: 0 !important; }
-        .${m.guilds?.threadSidebarOpen} { flex-shrink: 999999999 !important; }
-        .${m.guilds?.content}, .${m.calls?.noChat} {
+        ${chatLayerWrapper} > * { width: 100% !important; border-radius: 0 !important; }
+        ${threadSidebarOpen} { flex-shrink: 999999999 !important; }
+        ${guildsContent}, ${callsNoChat} {
             --width: var(--cui-forum-popout-width);
             --transition: max-width var(--cui-transition-speed), width var(--cui-transition-speed), min-width var(--cui-transition-speed);
         }
-        .${m.guilds?.content}:after, .${m.calls?.noChat}:after {
+        ${guildsContent}:after, ${callsNoChat}:after {
             content: ""; display: ${el.getForumPopout() ? "block" : "none"};
             height: 100%; max-width: var(--width); width: var(--width);
             min-width: var(--width); transition: var(--transition);
         }
-        ${s.forumPopoutWidth ? `
-            .${m.popout?.chatLayerWrapper}:before {
+        ${cssNum(s.forumPopoutWidth) ? `
+            ${chatLayerWrapper}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; left: -4px;
             }
@@ -466,13 +535,17 @@ function forumPopoutInit(): void {
 }
 
 function forumPopoutToggleCSS(): string {
+    const chatLayerWrapper = cls(m.popout?.chatLayerWrapper, '[class*="chatLayerWrapper_"]');
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const callsNoChat = cls(m.calls?.noChat, '[class*="noChat_"]');
+
     return `
-        .${m.popout?.chatLayerWrapper} {
+        ${chatLayerWrapper} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
         }
-        .${m.guilds?.content}:after, .${m.calls?.noChat}:after {
+        ${guildsContent}:after, ${callsNoChat}:after {
             max-width: var(--cui-collapse-size);
             width: var(--cui-collapse-size);
             min-width: var(--cui-collapse-size);
@@ -481,28 +554,32 @@ function forumPopoutToggleCSS(): string {
 }
 
 function forumPopoutFloatCSS(): string {
+    const guildsContent = cls(m.guilds?.content, '[class*="content_"]');
+    const callsNoChat = cls(m.calls?.noChat, '[class*="noChat_"]');
+
     return `
-        .${m.guilds?.content}:after, .${m.calls?.noChat}:after {
+        ${guildsContent}:after, ${callsNoChat}:after {
             max-width: 0 !important; width: 0 !important; min-width: 0 !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Activity Panel ───
-
 function activityPanelInit(): void {
     const s = getSettings();
+    const nowPlayingColumn = cls(m.social?.nowPlayingColumn, '[class*="nowPlayingColumn_"]');
+    const activityItemCard = cls(m.activity?.itemCard, '[class*="itemCard_"]');
+
     addStyle("activityPanel_init", `
-        .${m.social?.nowPlayingColumn} {
+        ${nowPlayingColumn} {
             max-width: var(--cui-activity-panel-width) !important;
             width: var(--cui-activity-panel-width) !important;
             min-width: var(--cui-activity-panel-width) !important;
             transition: max-width var(--cui-transition-speed), width var(--cui-transition-speed), min-width var(--cui-transition-speed);
             display: initial !important;
         }
-        .${m.activity?.itemCard} { overflow: hidden !important; }
-        ${s.activityPanelWidth ? `
-            .${m.social?.nowPlayingColumn}:before {
+        ${activityItemCard} { overflow: hidden !important; }
+        ${cssNum(s.activityPanelWidth) ? `
+            ${nowPlayingColumn}:before {
                 cursor: e-resize; z-index: 200; position: absolute; content: "";
                 width: 16px; height: 100%; transform: translateX(-4px);
             }
@@ -511,8 +588,10 @@ function activityPanelInit(): void {
 }
 
 function activityPanelToggleCSS(): string {
+    const nowPlayingColumn = cls(m.social?.nowPlayingColumn, '[class*="nowPlayingColumn_"]');
+
     return `
-        .${m.social?.nowPlayingColumn} {
+        ${nowPlayingColumn} {
             max-width: var(--cui-collapse-size) !important;
             width: var(--cui-collapse-size) !important;
             min-width: var(--cui-collapse-size) !important;
@@ -521,69 +600,74 @@ function activityPanelToggleCSS(): string {
 }
 
 function activityPanelFloatCSS(): string {
+    const nowPlayingColumn = cls(m.social?.nowPlayingColumn, '[class*="nowPlayingColumn_"]');
+
     return `
-        .${m.social?.nowPlayingColumn} {
+        ${nowPlayingColumn} {
             position: absolute !important; z-index: 190 !important;
             right: 0 !important; height: 100% !important; max-height: 100% !important;
         }
     `.replace(/\s+/g, " ");
 }
 
-// ─── Panel Init/Toggle/Float/Clear Dispatch ───
-
-const PANEL_NAMES = [
+const panelNames = [
     "serverList", "channelList", "membersList", "userProfile",
     "messageInput", "windowBar", "callWindow", "userArea",
     "searchPanel", "forumPopout", "activityPanel",
 ];
 
-const PANEL_INIT_FNS = [
+const panelInits = [
     serverListInit, channelListInit, membersListInit, userProfileInit,
     messageInputInit, windowBarInit, callWindowInit, userAreaInit,
     searchPanelInit, forumPopoutInit, activityPanelInit,
 ];
 
-const PANEL_TOGGLE_CSS_FNS = [
+const panelToggleCSS = [
     serverListToggleCSS, channelListToggleCSS, membersListToggleCSS, userProfileToggleCSS,
     messageInputToggleCSS, windowBarToggleCSS, callWindowToggleCSS, userAreaToggleCSS,
     searchPanelToggleCSS, forumPopoutToggleCSS, activityPanelToggleCSS,
 ];
 
-const PANEL_FLOAT_CSS_FNS: ((() => string) | null)[] = [
+const panelFloatCSS: ((() => string) | null)[] = [
     serverListFloatCSS, channelListFloatCSS, membersListFloatCSS, userProfileFloatCSS,
     messageInputFloatCSS, windowBarFloatCSS, null, null,
     searchPanelFloatCSS, forumPopoutFloatCSS, activityPanelFloatCSS,
 ];
 
 export function initPanel(index: number): void {
-    PANEL_INIT_FNS[index]();
+    const fn = panelInits.at(index);
+    if (fn) fn();
 }
 
 export function togglePanel(index: number): void {
     const s = getSettings();
-    const state = panelStates[index];
-    const name = PANEL_NAMES[index];
+    const state = panelStates.at(index);
+    const name = panelNames.at(index);
+    if (!state || !name) return;
 
-    if (!s.collapseDisabledButtons && s.buttonIndexes[index] === 0) {
+    if (!s.collapseDisabledButtons && s.buttonIndexes.at(index) === 0) {
         state.toggled = !state.toggled;
         return;
     }
 
     updateVariables();
 
-    if (!s.expandOnHover || !s.expandOnHoverEnabled[index]) {
-        if (state.toggled) addStyle(`${name}_toggle`, PANEL_TOGGLE_CSS_FNS[index]());
+    const toggleFn = panelToggleCSS.at(index);
+    if (!toggleFn) return;
+
+    if (!s.expandOnHover || !s.expandOnHoverEnabled.at(index)) {
+        if (state.toggled) addStyle(`${name}_toggle`, toggleFn());
         else removeStyle(`${name}_toggle`);
     } else {
         if (state.toggled) {
-            addStyle(`${name}_toggle_dynamic`, PANEL_TOGGLE_CSS_FNS[index]());
-            const floatFn = PANEL_FLOAT_CSS_FNS[index];
-            if (floatFn && s.floatingPanels && s.floatingEnabled[index] === "hover")
+            addStyle(`${name}_toggle_dynamic`, toggleFn());
+            const floatFn = panelFloatCSS.at(index);
+            if (floatFn && s.floatingPanels && s.floatingEnabled.at(index) === "hover")
                 setTimeout(() => addStyle(`${name}_float`, floatFn()), s.transitionSpeed);
         } else {
             removeStyle(`${name}_toggle_dynamic`);
-            const floatFn = PANEL_FLOAT_CSS_FNS[index];
-            if (floatFn && s.floatingPanels && s.floatingEnabled[index] === "hover")
+            const floatFn = panelFloatCSS.at(index);
+            if (floatFn && s.floatingPanels && s.floatingEnabled.at(index) === "hover")
                 removeStyle(`${name}_float`);
         }
     }
@@ -592,43 +676,44 @@ export function togglePanel(index: number): void {
 }
 
 export function floatPanel(index: number): void {
-    const floatFn = PANEL_FLOAT_CSS_FNS[index];
-    if (floatFn) addStyle(`${PANEL_NAMES[index]}_float`, floatFn());
+    const floatFn = panelFloatCSS.at(index);
+    const name = panelNames.at(index);
+    if (floatFn && name) addStyle(`${name}_float`, floatFn());
 }
 
 export function clearPanel(index: number): void {
-    const name = PANEL_NAMES[index];
+    const name = panelNames.at(index);
+    if (!name) return;
     removeStyle(`${name}_init`);
     removeStyle(`${name}_toggle`);
     removeStyle(`${name}_toggle_dynamic`);
     removeStyle(`${name}_float`);
     removeStyle(`${name}_queryToggle`);
-    panelStates[index].toggled = true;
+    const state = panelStates.at(index);
+    if (state) state.toggled = true;
 }
 
 export function collapseElementDynamic(index: number, collapsed: boolean, collapsedStates: boolean[]): void {
-    const name = PANEL_NAMES[index];
-
-    if (collapsed) {
-        addStyle(`${name}_toggle_dynamic`, PANEL_TOGGLE_CSS_FNS[index]());
-    } else {
-        removeStyle(`${name}_toggle_dynamic`);
-    }
-
-    collapsedStates[index] = collapsed;
+    const name = panelNames.at(index);
+    const toggleFn = panelToggleCSS.at(index);
+    if (!name || !toggleFn) return;
+    if (collapsed) addStyle(`${name}_toggle_dynamic`, toggleFn());
+    else removeStyle(`${name}_toggle_dynamic`);
+    collapsedStates.splice(index, 1, collapsed);
 }
-
-// ─── Button Group Styles ───
 
 export function initSettingsButtons(): void {
     const s = getSettings();
+    const avatarWrapper = cls(m.user?.avatarWrapper, '[class*="avatarWrapper_"]');
+    const buttons = cls(m.user?.buttons, '[class*="buttons_"]');
+
     addStyle("settingsButtons_init", `
-        .${m.user?.avatarWrapper} { flex-grow: 1 !important; }
-        .${m.user?.buttons} {
+        ${avatarWrapper} { flex-grow: 1 !important; }
+        ${buttons} {
             transition: gap var(--cui-transition-speed) !important;
             transform: translateX(calc((1 - var(--cui-channel-list-toggled)) * 1000000000px));
         }
-        .${m.user?.buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) {
+        ${buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) {
             transition: width var(--cui-transition-speed) !important;
             overflow: hidden !important;
         }
@@ -637,9 +722,10 @@ export function initSettingsButtons(): void {
 }
 
 export function hideSettingsButtons(): void {
+    const buttons = cls(m.user?.buttons, '[class*="buttons_"]');
     addStyle("settingsButtons_hide", `
-        .${m.user?.buttons} { gap: 0px !important; }
-        .${m.user?.buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) { width: 0px !important; }
+        ${buttons} { gap: 0px !important; }
+        ${buttons} > *:not(:last-child):not([class*="gameActivityToggle"]) { width: 0px !important; }
     `.replace(/\s+/g, " "));
 }
 
@@ -654,11 +740,13 @@ export function clearSettingsButtons(): void {
 
 export function initMessageInputButtons(): void {
     const s = getSettings();
+    const buttons = cls(m.input?.buttons, '[class*="buttons_"]');
+
     addStyle("messageInputButtons_init", `
-        .${m.input?.buttons} { transition: gap var(--cui-transition-speed) !important; }
-        .${m.input?.buttons} > *:not(:last-child) {
+        ${buttons} { transition: gap var(--cui-transition-speed) !important; }
+        ${buttons} > *:not(:last-child) {
             transition: max-width var(--cui-transition-speed) !important;
-            max-width: ${s.messageInputButtonWidth}px !important;
+            max-width: ${cssNum(s.messageInputButtonWidth, 20, 200)}px !important;
             overflow: hidden !important;
         }
     `.replace(/\s+/g, " "));
@@ -666,9 +754,10 @@ export function initMessageInputButtons(): void {
 }
 
 export function hideMessageInputButtons(): void {
+    const buttons = cls(m.input?.buttons, '[class*="buttons_"]');
     addStyle("messageInputButtons_hide", `
-        .${m.input?.buttons} { gap: 0px !important; }
-        .${m.input?.buttons} > *:not(:last-child) { max-width: 0px !important; }
+        ${buttons} { gap: 0px !important; }
+        ${buttons} > *:not(:last-child) { max-width: 0px !important; }
     `.replace(/\s+/g, " "));
 }
 
@@ -711,10 +800,13 @@ export function clearToolbarButtons(): void {
 
 export function initToolbarFull(): void {
     const s = getSettings();
+    const guildsTitle = cls(m.guilds?.title, '[class*="titleContainer_"] [class*="title_"]');
+    const iconsToolbar = cls(m.icons?.toolbar, '[class*="toolbar_"]');
+
     addStyle("toolbarFull_init", `
-        .${m.guilds?.title} .${m.icons?.toolbar} > *:not(:last-child) {
+        ${guildsTitle} ${iconsToolbar} > *:not(:last-child):not(.cui-toolbar) {
             transition: max-width var(--cui-transition-speed) !important;
-            max-width: ${s.toolbarElementMaxWidth}px !important;
+            max-width: ${cssNum(s.toolbarElementMaxWidth, 40, 2000)}px !important;
             overflow: hidden !important;
         }
     `.replace(/\s+/g, " "));
@@ -722,8 +814,11 @@ export function initToolbarFull(): void {
 }
 
 export function hideToolbarFull(): void {
+    const guildsTitle = cls(m.guilds?.title, '[class*="titleContainer_"] [class*="title_"]');
+    const iconsToolbar = cls(m.icons?.toolbar, '[class*="toolbar_"]');
+
     addStyle("toolbarFull_hide", `
-        .${m.guilds?.title} .${m.icons?.toolbar} > *:not(:last-child) { max-width: 0px !important; }
+        ${guildsTitle} ${iconsToolbar} > *:not(:last-child):not(.cui-toolbar) { max-width: 0px !important; }
     `.replace(/\s+/g, " "));
 }
 
@@ -736,15 +831,13 @@ export function clearToolbarFull(): void {
     removeStyle("toolbarFull_init");
 }
 
-// ─── Master Init / Clear ───
-
 export function initAllStyles(): void {
     const s = getSettings();
     initRootStyles();
 
     for (let i = 0; i < PANEL_COUNT; i++) {
         initPanel(i);
-        if (!s.buttonsActive[i]) togglePanel(i);
+        if (!s.buttonsActive.at(i)) togglePanel(i);
     }
 
     initSettingsButtons();
