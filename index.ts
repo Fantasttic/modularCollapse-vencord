@@ -149,7 +149,7 @@ function renderToolbar(toolbarParent: Element): void {
         const s = getSettings();
         for (let i = 1; i <= s.buttonIndexes.length; i++) {
             for (let j = 0; j < s.buttonIndexes.length; j++) {
-                if (i === s.buttonIndexes.at(j) && (!s.collapseDisabledButtons || el.getAllPanels().at(j)))
+                if (i === s.buttonIndexes[j] && (!s.collapseDisabledButtons || el.getAllPanels()[j]))
                     createToolbarButton(j);
             }
         }
@@ -159,14 +159,14 @@ function renderToolbar(toolbarParent: Element): void {
 function createToolbarButton(index: number): void {
     const s = getSettings();
     const labels = getCurrentLabels();
-    const shortcutKeys = (s.shortcutList.at(index) ?? [])
+    const shortcutKeys = (s.shortcutList[index] ?? [])
         .map(e => (e.length === 1 ? e.toUpperCase() : e))
         .join("+");
-    const text = `${labels.at(index)} (${shortcutKeys})`;
+    const text = `${labels[index]} (${shortcutKeys})`;
 
     const button = document.createElement("div");
     button.id = `cui-icon-${index}`;
-    button.className = `${m.icons?.iconWrapper} ${m.icons?.clickable} ${(s.buttonsActive.at(index) ?? false) ? m.icons?.selected : ""}`;
+    button.className = `${m.icons?.iconWrapper} ${m.icons?.clickable} ${(s.buttonsActive[index] ?? false) ? m.icons?.selected : ""}`;
     button.setAttribute("role", "button");
     button.setAttribute("aria-label", text);
     button.setAttribute("tabindex", "0");
@@ -185,7 +185,7 @@ function createToolbarButton(index: number): void {
     svg.setAttribute("viewBox", "0 0 24 24");
     
     // Parse the trusted static SVG path string using DOMParser to avoid direct innerHTML on elements
-    const iconMarkup = ICONS.at(index);
+    const iconMarkup = ICONS[index];
     if (iconMarkup) {
         const parser = new DOMParser();
         const doc = parser.parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + iconMarkup + '</svg>', "image/svg+xml");
@@ -211,7 +211,7 @@ function toggleButton(index: number): void {
         toolbarElement?.querySelector(`#cui-icon-${index}`)?.classList.toggle(selectedClass);
     }
     const newActive = [...s.buttonsActive];
-    newActive.splice(index, 1, !(s.buttonsActive.at(index) ?? false));
+    newActive.splice(index, 1, !(s.buttonsActive[index] ?? false));
     setSetting("buttonsActive", newActive);
 }
 
@@ -221,18 +221,18 @@ function tickExpandOnHover(x: number, y: number): void {
 
     const panels = el.getAllPanels();
     for (let i = 0; i < PANEL_COUNT; i++) {
-        if (!s.collapseDisabledButtons && s.buttonIndexes.at(i) === 0) continue;
-        if (!s.expandOnHoverEnabled.at(i)) continue;
-        if (s.buttonsActive.at(i)) continue;
+        if (!s.collapseDisabledButtons && s.buttonIndexes[i] === 0) continue;
+        if (!s.expandOnHoverEnabled[i]) continue;
+        if (s.buttonsActive[i]) continue;
 
-        if (isNear(panels.at(i) ?? null, s.expandOnHoverFudgeFactor, x, y)) {
-            if (collapsed.at(i)) {
-                if (s.floatingPanels && s.floatingEnabled.at(i) === "hover")
+        if (isNear(panels[i] ?? null, s.expandOnHoverFudgeFactor, x, y)) {
+            if (collapsed[i]) {
+                if (s.floatingPanels && s.floatingEnabled[i] === "hover")
                     styles.floatPanel(i);
                 styles.collapseElementDynamic(i, false, collapsed);
             }
         } else {
-            if (!collapsed.at(i)) {
+            if (!collapsed[i]) {
                 if (el.getBiteSizePanel() || el.getRightClickMenu() ||
                     el.getForumPreviewTooltip() || el.getExpressionPicker()) {
                     styles.collapseElementDynamic(i, false, collapsed);
@@ -290,7 +290,7 @@ function tickCollapseToolbar(x: number, y: number, full: boolean): void {
 function tickKeyboardShortcuts(): void {
     const shortcuts = getShortcutSets();
     for (let i = 0; i < PANEL_COUNT; i++) {
-        const currentShortcut = shortcuts.at(i);
+        const currentShortcut = shortcuts[i];
         if (currentShortcut && keys.size === currentShortcut.size) {
             let match = true;
             for (const k of keys) {
@@ -306,13 +306,13 @@ function checkConditionalCollapse(): void {
     if (!s.conditionalCollapse) return;
 
     for (let i = 0; i < PANEL_COUNT; i++) {
-        const conditional = s.collapseConditionals.at(i);
+        const conditional = s.collapseConditionals[i];
         if (conditional) {
             try {
                 if (safeEval(conditional)) {
-                    if (!collapsed.at(i)) styles.collapseElementDynamic(i, true, collapsed);
+                    if (!collapsed[i]) styles.collapseElementDynamic(i, true, collapsed);
                 } else {
-                    if (collapsed.at(i)) styles.collapseElementDynamic(i, false, collapsed);
+                    if (collapsed[i]) styles.collapseElementDynamic(i, false, collapsed);
                 }
             } catch { /* ignore invalid expressions */ }
         }

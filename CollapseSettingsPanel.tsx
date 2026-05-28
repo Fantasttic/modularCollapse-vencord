@@ -208,8 +208,8 @@ export function CollapseSettingsPanel() {
         <div className="cui-settings-tab-panel">
             <Forms.FormText>Configure settings for each individual panel section.</Forms.FormText>
             {Array.from({ length: PANEL_COUNT }).map((_, index) => {
-                const isActive = s.buttonsActive.at(index);
-                const label = labels.at(index) || `Panel ${index}`;
+                const isActive = s.buttonsActive[index];
+                const label = labels[index] || `Panel ${index}`;
 
                 return (
                     <ExpandableSection
@@ -226,7 +226,7 @@ export function CollapseSettingsPanel() {
 
                                 <div className="cui-settings-form-group">
                                     <label className="cui-settings-input-label">Floating Mode</label>
-                                    {s.floatingEnabled.at(index) === null ? (
+                                    {s.floatingEnabled[index] === null ? (
                                         <div className="cui-sub-text">Floating is not supported for this panel.</div>
                                     ) : (
                                         <Select
@@ -238,7 +238,7 @@ export function CollapseSettingsPanel() {
                                             ]}
                                             closeOnSelect={true}
                                             select={v => setSettingArrayIndex("floatingEnabled", index, v as any)}
-                                            isSelected={v => v === s.floatingEnabled.at(index)}
+                                            isSelected={v => v === s.floatingEnabled[index]}
                                             serialize={v => String(v)}
                                         />
                                     )}
@@ -247,7 +247,7 @@ export function CollapseSettingsPanel() {
                                 <FormSwitch
                                     title="Expand on Hover"
                                     description="Trigger hover expansion for this specific panel."
-                                    value={s.expandOnHoverEnabled.at(index)}
+                                    value={s.expandOnHoverEnabled[index]}
                                     onChange={v => setSettingArrayIndex("expandOnHoverEnabled", index, v)}
                                 />
 
@@ -255,7 +255,7 @@ export function CollapseSettingsPanel() {
                                     <label className="cui-settings-input-label">Size Collapse Threshold (px)</label>
                                     <TextInput
                                         type="number"
-                                        value={String(s.sizeCollapseThreshold.at(index))}
+                                        value={String(s.sizeCollapseThreshold[index])}
                                         onChange={v => {
                                             const val = parseInt(v);
                                             if (!isNaN(val) && val >= 0) {
@@ -271,7 +271,7 @@ export function CollapseSettingsPanel() {
                                     <label className="cui-settings-input-label">Keyboard Shortcut</label>
                                     <TextInput
                                         type="text"
-                                        value={s.shortcutList.at(index)?.join("+") || ""}
+                                        value={s.shortcutList[index]?.join("+") || ""}
                                         onChange={v => {
                                             const keys = v.split("+").map(k => k.trim()).filter(Boolean);
                                             setSettingArrayIndex("shortcutList", index, keys);
@@ -285,7 +285,7 @@ export function CollapseSettingsPanel() {
                                     <label className="cui-settings-input-label">Conditional Collapse Expression</label>
                                     <TextInput
                                         type="text"
-                                        value={s.collapseConditionals.at(index) || ""}
+                                        value={s.collapseConditionals[index] || ""}
                                         onChange={v => setSettingArrayIndex("collapseConditionals", index, v)}
                                         placeholder="e.g. innerWidth < 1200"
                                     />
@@ -298,7 +298,7 @@ export function CollapseSettingsPanel() {
                             <div
                                 className="cui-panel-icon"
                                 dangerouslySetInnerHTML={{
-                                    __html: `<svg width="20" height="20" fill="none" viewBox="0 0 24 24">${ICONS.at(index)}</svg>`
+                                    __html: `<svg width="20" height="20" fill="none" viewBox="0 0 24 24">${ICONS[index]}</svg>`
                                 }}
                             />
                             <span className="cui-panel-title">{label}</span>

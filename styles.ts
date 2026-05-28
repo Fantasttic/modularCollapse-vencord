@@ -90,7 +90,7 @@ interface PanelStyleState {
 const panelStates: PanelStyleState[] = Array.from({ length: PANEL_COUNT }, () => ({ toggled: true }));
 
 export function getPanelState(index: number): PanelStyleState {
-    return panelStates.at(index)!;
+    return panelStates[index]!;
 }
 
 function serverListInit(): void {
@@ -635,39 +635,39 @@ const panelFloatCSS: ((() => string) | null)[] = [
 ];
 
 export function initPanel(index: number): void {
-    const fn = panelInits.at(index);
+    const fn = panelInits[index];
     if (fn) fn();
 }
 
 export function togglePanel(index: number): void {
     const s = getSettings();
-    const state = panelStates.at(index);
-    const name = panelNames.at(index);
+    const state = panelStates[index];
+    const name = panelNames[index];
     if (!state || !name) return;
 
-    if (!s.collapseDisabledButtons && s.buttonIndexes.at(index) === 0) {
+    if (!s.collapseDisabledButtons && s.buttonIndexes[index] === 0) {
         state.toggled = !state.toggled;
         return;
     }
 
     updateVariables();
 
-    const toggleFn = panelToggleCSS.at(index);
+    const toggleFn = panelToggleCSS[index];
     if (!toggleFn) return;
 
-    if (!s.expandOnHover || !s.expandOnHoverEnabled.at(index)) {
+    if (!s.expandOnHover || !s.expandOnHoverEnabled[index]) {
         if (state.toggled) addStyle(`${name}_toggle`, toggleFn());
         else removeStyle(`${name}_toggle`);
     } else {
         if (state.toggled) {
             addStyle(`${name}_toggle_dynamic`, toggleFn());
-            const floatFn = panelFloatCSS.at(index);
-            if (floatFn && s.floatingPanels && s.floatingEnabled.at(index) === "hover")
+            const floatFn = panelFloatCSS[index];
+            if (floatFn && s.floatingPanels && s.floatingEnabled[index] === "hover")
                 setTimeout(() => addStyle(`${name}_float`, floatFn()), s.transitionSpeed);
         } else {
             removeStyle(`${name}_toggle_dynamic`);
-            const floatFn = panelFloatCSS.at(index);
-            if (floatFn && s.floatingPanels && s.floatingEnabled.at(index) === "hover")
+            const floatFn = panelFloatCSS[index];
+            if (floatFn && s.floatingPanels && s.floatingEnabled[index] === "hover")
                 removeStyle(`${name}_float`);
         }
     }
@@ -676,26 +676,26 @@ export function togglePanel(index: number): void {
 }
 
 export function floatPanel(index: number): void {
-    const floatFn = panelFloatCSS.at(index);
-    const name = panelNames.at(index);
+    const floatFn = panelFloatCSS[index];
+    const name = panelNames[index];
     if (floatFn && name) addStyle(`${name}_float`, floatFn());
 }
 
 export function clearPanel(index: number): void {
-    const name = panelNames.at(index);
+    const name = panelNames[index];
     if (!name) return;
     removeStyle(`${name}_init`);
     removeStyle(`${name}_toggle`);
     removeStyle(`${name}_toggle_dynamic`);
     removeStyle(`${name}_float`);
     removeStyle(`${name}_queryToggle`);
-    const state = panelStates.at(index);
+    const state = panelStates[index];
     if (state) state.toggled = true;
 }
 
 export function collapseElementDynamic(index: number, collapsed: boolean, collapsedStates: boolean[]): void {
-    const name = panelNames.at(index);
-    const toggleFn = panelToggleCSS.at(index);
+    const name = panelNames[index];
+    const toggleFn = panelToggleCSS[index];
     if (!name || !toggleFn) return;
     if (collapsed) addStyle(`${name}_toggle_dynamic`, toggleFn());
     else removeStyle(`${name}_toggle_dynamic`);
@@ -837,7 +837,7 @@ export function initAllStyles(): void {
 
     for (let i = 0; i < PANEL_COUNT; i++) {
         initPanel(i);
-        if (!s.buttonsActive.at(i)) togglePanel(i);
+        if (!s.buttonsActive[i]) togglePanel(i);
     }
 
     initSettingsButtons();
