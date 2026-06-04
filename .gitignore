@@ -5,3 +5,4 @@ dist/
 !*.config.js
 .DS_Store
 *.py
+tsconfig.json
