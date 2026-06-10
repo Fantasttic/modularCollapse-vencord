@@ -1,6 +1,5 @@
 
 
-
 # ModularCollapse
 ### A Vencord Userplugin
 
@@ -12,11 +11,6 @@ Collapse, resize, and float UI panels with keyboard shortcuts, hover expansion, 
 
 
 https://github.com/user-attachments/assets/9eebf129-656f-493a-b738-4761f70d4666
-
-
-
-
-
 
 
 
@@ -56,10 +50,63 @@ https://github.com/user-attachments/assets/9eebf129-656f-493a-b738-4761f70d4666
 
 ## 📦 Installation
 
-> **Requires**: Vencord installed **from source** (not the installer).  
-> See [Vencord's setup guide](https://docs.vencord.dev/installing/) if needed.
+> **Requires**: [Git](https://git-scm.com/), [Node.js v20+](https://nodejs.org/), and [pnpm](https://pnpm.io/) (`npm install -g pnpm`)
 
-### Method 1 — Git Clone (recommended, easy updates)
+### 🚀 One-Command Install (Recommended)
+
+Choose the script for your operating system. Both do everything automatically:
+clone Vencord, add the plugin, install deps, build, and inject into Discord.
+
+#### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Fantasttic/modularCollapse-vencord/main/install.sh | bash
+```
+
+Or clone the repo first and run locally:
+
+```bash
+git clone https://github.com/Fantasttic/modularCollapse-vencord.git
+cd modularCollapse-vencord
+chmod +x install.sh
+./install.sh
+```
+
+#### Windows (PowerShell)
+
+```powershell
+# Allow script execution (if needed)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Download and run
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Fantasttic/modularCollapse-vencord/main/install.ps1" -OutFile "$env:TEMP\install.ps1"
+& "$env:TEMP\install.ps1"
+```
+
+Or clone the repo first and run locally:
+
+```powershell
+git clone https://github.com/Fantasttic/modularCollapse-vencord.git
+cd modularCollapse-vencord
+.\install.ps1
+```
+
+#### Script Options
+
+| Flag | Bash | PowerShell | Description |
+|------|------|------------|-------------|
+| Method | `-m fork` or `-m userplugin` | `-Method fork` or `-Method userplugin` | Skip the method selection prompt |
+| Directory | `-d ~/MyVencord` | `-Dir "C:\MyVencord"` | Custom install directory (default: `~/Vencord`) |
+| Skip Inject | `-s` | `-SkipInject` | Skip the Discord injection step |
+| Help | `-h` | `-Help` | Show help |
+
+---
+
+### 🔧 Manual Installation
+
+> For users who prefer to install step by step, or already have Vencord from source.
+
+#### Method 1 — Git Clone (recommended, easy updates)
 
 ```bash
 # Navigate to your Vencord userplugins folder
@@ -69,15 +116,20 @@ cd /path/to/Vencord/src/userplugins
 git clone https://github.com/Fantasttic/modularCollapse-vencord.git modularCollapse
 ```
 
-### Method 2 — Manual Download
+#### Method 2 — Manual Download
 
 1. Download this repository as a ZIP
 2. Extract the folder and rename it to `modularCollapse`
 3. Place it inside `your-vencord-folder/src/userplugins/`
 
-### After installing
+#### After installing
 
 ```bash
+# Add developer entries (required for compilation)
+# In src/utils/constants.ts, add before the closing "} satisfies Record<string, Dev>)":
+#   programmer2514: { name: "programmer2514", id: 563652755814875146n },
+#   Fantasttic: { name: "Fantasttic", id: 0n },
+
 # Build Vencord
 cd /path/to/Vencord
 pnpm build
@@ -88,6 +140,17 @@ pnpm inject
 
 4. **Restart Discord**
 5. Go to **Settings → Vencord → Plugins** → search **ModularCollapse** → Enable ✅
+
+---
+
+## 🍎 macOS DMG Installer
+
+A pre-built DMG is available for macOS. Simply download, open, and double-click the installer app.
+
+```bash
+# Or build the DMG yourself:
+./build_dmg.sh
+```
 
 ---
 
@@ -142,13 +205,18 @@ Supported logic: `&&`, `||`
 
 ```
 modularCollapse/
-├── index.ts       # Plugin entry, event listeners, lifecycle
-├── settings.ts    # DataStore persistence + caching
-├── modules.ts     # CSS class mappings
-├── elements.ts    # DOM element queries
-├── styles.ts      # Dynamic CSS per panel state
-├── cssHelper.ts   # Style element utilities
-└── constants.ts   # Panel labels & SVG icons
+├── index.ts                  # Plugin entry, event listeners, lifecycle
+├── settings.ts               # DataStore persistence + caching
+├── modules.ts                # CSS class mappings
+├── elements.ts               # DOM element queries
+├── styles.ts                 # Dynamic CSS per panel state
+├── cssHelper.ts              # Style element utilities
+├── constants.ts              # Panel labels & SVG icons
+├── CollapseSettingsPanel.tsx  # Settings UI component
+├── CollapseSettingsPanel.css  # Settings UI styles
+├── install.sh                # macOS/Linux installer script
+├── install.ps1               # Windows installer script (PowerShell)
+└── build_dmg.sh              # macOS DMG builder
 ```
 
 ---
