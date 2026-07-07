@@ -141,6 +141,20 @@ pnpm inject
 4. **Restart Discord**
 5. Go to **Settings → Vencord → Plugins** → search **ModularCollapse** → Enable ✅
 
+### 🛠️ Local Development (Apply Local Changes)
+
+If you are working on this plugin locally and want to quickly apply and test changes in your Discord client, run:
+
+```bash
+npm run apply
+```
+
+This single command:
+1. Creates a symlink from this local workspace folder directly to your `~/Vencord` userplugins directory.
+2. Configures necessary developer credentials inside Vencord.
+3. Automatically installs dependencies and builds the Vencord client.
+4. Reinjects Vencord into Discord.
+
 ---
 
 ## 🍎 macOS DMG Installer

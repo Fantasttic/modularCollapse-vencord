@@ -1,0 +1,8 @@
+{
+  "name": "modular-collapse",
+  "version": "1.0.0",
+  "description": "ModularCollapse Vencord plugin",
+  "scripts": {
+    "apply": "chmod +x apply.sh && ./apply.sh"
+  }
+}
